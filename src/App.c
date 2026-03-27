@@ -7,53 +7,6 @@
 #include <stdlib.h> 
 #include <math.h>
 
-/*
-Part 0 Solutions
---------------------------------------------------
-Problem 3.a: 2500 mikro seconds
-Problem 3.b: 500 mikro seconds
-
-Problem 4.a: 1136.363636... mikro
-Problem 4.b: p(k) = 440 x pow(2, (k/12))
-
-Problem 4.c:
-  a) 1702.621678269 mikro seconds
-  b) 675.685860797 mikro seconds
-
-Problem 4.e:
-  Maximum index is 9
-  Minimum index is -5
-
-Problem 5.a: -5 -3 -1 -5 -5 -3 -1 -5 -1 0
-Problem 5.b:
-  Maximum index is 14
-  Minimum index is -10
-
-Problem 5.d: x(k) = k - min_index
-
-
-Part 1 Solutions
---------------------------------------------------
-Problem 2.a: The sound itself becomes "dirtier"
-
-Problem 2.b: When setting the period to 650, aka frequency 769, instead of the sound becoming dirtier, 
-it becomes almost like a half step. The reason why is because...
-
-Problem 2.c: When setting the period to 931, aka frequency 537, instead of the sound becoming diriter,
-it becomes almost smoother like. The reason why is because...
-
-Problem 3.b: The sound itself doesn't become as much dirty as before. 
-
-Problem 3.c: We noticed a noticable difference around the 13000-14000 range of the background loop.
-
-Problem 4.a: Average: 1307, Worst: 1330 mikroseconds
-Problem 4.b: Average: 97, Worst: 110
-Problem 4.c: Average: 1.73, Worst: 1.8
-
-
-*/
-
-
 extern App app;
 extern MusicPlayer musicPlayer;
 extern SoundPlayer soundPlayer;
