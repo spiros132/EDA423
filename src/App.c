@@ -136,14 +136,14 @@ void reader(App *self, int c) {
     /* Increase the volume */
     SCI_WRITECHAR(&sci0, '\n');
 
-    int inc_volume = SYNC(&musicPlayer, get_volume, 0) + 1;
+    int inc_volume = SYNC(&soundPlayer, get_volume, 0) + 1;
 
     if (inc_volume > 20) {
       inc_volume = 20;
     }
 
     self->volume = inc_volume;
-    ASYNC(&musicPlayer, set_volume, inc_volume);
+    ASYNC(&soundPlayer, set_volume, inc_volume);
 
     itoa(inc_volume, strBuffer, 10);
 
@@ -155,14 +155,14 @@ void reader(App *self, int c) {
     /* Decrease the volume */
     SCI_WRITECHAR(&sci0, '\n');
 
-    int dec_volume = SYNC(&musicPlayer, get_volume, 0) - 1;
+    int dec_volume = SYNC(&soundPlayer, get_volume, 0) - 1;
 
     if (dec_volume < 0) {
       dec_volume = 0;
     }
 
     self->volume = dec_volume;
-    ASYNC(&musicPlayer, set_volume, dec_volume);
+    ASYNC(&soundPlayer, set_volume, dec_volume);
 
     itoa(dec_volume, strBuffer, 10);
 
@@ -199,7 +199,7 @@ void reader(App *self, int c) {
     }
 
     self->volume = volume;
-    ASYNC(&musicPlayer, set_volume, volume);
+    ASYNC(&soundPlayer, set_volume, volume);
 
     itoa(volume, strBuffer, 10);
 

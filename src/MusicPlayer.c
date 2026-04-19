@@ -166,7 +166,7 @@ void next_note(MusicPlayer *self, int unused) {
   // 60/bpm = (60/2*minute)/beat * 1000
 
   // Schedule the play_tone to play almost immediately
-  SEND(MSEC(50), MAX_LAG_DEADLINE, &self->super, play_tone, true);
+  SEND(MSEC(50), MAX_LAG_DEADLINE, &soundPlayer, play_tone, true);
 
   // Schedule the finish_note function
   self->finish_note_msg = SEND(MSEC(mspb), MAX_LAG_DEADLINE, self, finish_note, 0);
