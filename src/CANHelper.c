@@ -21,10 +21,24 @@ int get_type(unsigned char buffer[8]) {
   return -1;
 }
 
+int get_buffer_value(unsigned char buffer[8]) {
+  // Buffer starts at index 1, since index 0 is used for the type.
+  char strBuffer[8];
+  for (int i = 0; i < 7; i++) {
+    strBuffer[i] = (char)buffer[i+1];
+
+    if (buffer[i+1] == 0) {
+      break;
+    }
+  }
+
+  return atoi(strBuffer);
+}
+
 void send_can_message(unsigned char priority, unsigned char type, char buff[7]) {
   CANMsg msg;
 
-  msg.nodeId = 1;
+  msg.nodeId = 2;
   msg.msgId = priority;
   msg.buff[0] = type;
 

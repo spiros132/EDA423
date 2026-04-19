@@ -14,6 +14,11 @@ int get_priority(unsigned char msgID);
 /// @return The type of the CAN message, or -1 if the type is unknown.
 int get_type(unsigned char buffer[8]);
 
+/// @brief Get the value from the CAN message buffer.
+/// @param buffer The buffer of the CAN message.
+/// @return The value from the CAN message buffer, or -1 if the value is unknown.
+int get_buffer_value(unsigned char buffer[8]);
+
 
 /// @brief Send a CAN message with the given message ID and buffer.
 /// @param msgId The message ID of the CAN message.
