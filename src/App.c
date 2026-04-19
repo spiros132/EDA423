@@ -134,25 +134,41 @@ void reader(App *self, int c) {
     break;
   case KEY_VOLUME_INC:
     /* Increase the volume */
-    if (self->mode == CONDUCTOR_MODE) {
-      ASYNC(&musicPlayer, increase_volume, 1);
+    SCI_WRITECHAR(&sci0, '\n');
+
+    int inc_volume = SYNC(&musicPlayer, get_volume, 0) + 1;
+
+    if (inc_volume > 20) {
+      inc_volume = 20;
     }
-    self->volume++;
-    if(self->volume > 20) {
-      self->volume = 20;
-    }
-    //send_can_message_int(PRIORITY_CONDUCTOR, TYPE_, self->volume);
+
+    self->volume = inc_volume;
+    ASYNC(&musicPlayer, set_volume, inc_volume);
+
+    itoa(inc_volume, strBuffer, 10);
+
+    SCI_WRITE(&sci0, "Volume set: ");
+    SCI_WRITE(&sci0, strBuffer);
+    SCI_WRITECHAR(&sci0, '\n');
     break;
   case KEY_VOLUME_DEC:
     /* Decrease the volume */
-    if (self->mode == CONDUCTOR_MODE) {
-      ASYNC(&musicPlayer, decrease_volume, 1);
+    SCI_WRITECHAR(&sci0, '\n');
+
+    int dec_volume = SYNC(&musicPlayer, get_volume, 0) - 1;
+
+    if (dec_volume < 0) {
+      dec_volume = 0;
     }
-    self->volume--;
-    if(self->volume < 0) {
-      self->volume = 0;
-    }
-    //send_can_message_int(FLAG_VOLUME, self->volume);
+
+    self->volume = dec_volume;
+    ASYNC(&musicPlayer, set_volume, dec_volume);
+
+    itoa(dec_volume, strBuffer, 10);
+
+    SCI_WRITE(&sci0, "Volume set: ");
+    SCI_WRITE(&sci0, strBuffer);
+    SCI_WRITECHAR(&sci0, '\n');
     break;
   case KEY_MUTE:
     /* Toggle the mute */
@@ -175,12 +191,15 @@ void reader(App *self, int c) {
     finish_input(self, 0);
 
     int volume = self->history[0];
-    self->volume = volume;
 
-    if (self->mode == CONDUCTOR_MODE) {
-      ASYNC(&musicPlayer, set_volume, volume);
+    if (volume < 0) {
+      volume = 0;
+    } else if (volume > 20) {
+      volume = 20;
     }
-    //send_can_message_int(FLAG_VOLUME, volume);
+
+    self->volume = volume;
+    ASYNC(&musicPlayer, set_volume, volume);
 
     itoa(volume, strBuffer, 10);
 

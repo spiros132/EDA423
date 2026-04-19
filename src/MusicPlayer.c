@@ -74,27 +74,6 @@ void set_mute(MusicPlayer *self, int muted) {
   self->muted = muted;
 }
 
-int clamp_volume(int volume) {
-  if (volume > 20) {
-    volume = 20;
-  } else if (volume < 0) {
-    volume = 0;
-  }
-  return volume;
-}
-
-void increase_volume(MusicPlayer *self, int delta) {
-  int volume = SYNC(&soundPlayer, get_volume, 0) + delta;
-  volume = clamp_volume(volume);
-  ASYNC(&soundPlayer, set_volume, volume);
-}
-
-void decrease_volume(MusicPlayer *self, int delta) {
-  int volume = SYNC(&soundPlayer, get_volume, 0) - delta;
-  volume = clamp_volume(volume);
-  ASYNC(&soundPlayer, set_volume, volume);
-}
-
 
 /* Plays the tone */
 void play_music(MusicPlayer *self, int unused) {

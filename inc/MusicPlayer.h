@@ -60,8 +60,6 @@ void stop_note(MusicPlayer *, int);
 
 void next_note(MusicPlayer *, int);
 void finish_note(MusicPlayer *, int);
-void increase_volume(MusicPlayer *, int);
-void decrease_volume(MusicPlayer *, int);
 
 // Getters
 int get_tempo(MusicPlayer *, int);
