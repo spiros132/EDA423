@@ -2,18 +2,16 @@
 #define _APP_H
 
 #include "TinyTimber.h"
+#include "Definitions.h"
 #include <stdbool.h>
 
 #define BUFFERLENGTH 10
-#define DELIMITER 'e'
-#define DAC_REG (*(volatile uint8_t *)0x4000741C)
 
-#define CONDUCTOR_MODE 1
-#define MUSICIAN_MODE  2
+
 
 typedef struct {
   Object super;
-  
+
   //Part 0
 
   // Step 0
@@ -22,24 +20,34 @@ typedef struct {
   int history[3];
   int historyLength;
 
-  // Step 1
+
+  /// @brief The index of the current note playing in the song.
   int songIndex;
+
+  /// @brief The notes of the song.
   int song[32];
+
+  /// @brief The period of the notes in the song.
   int period[25];
 
-  /* Mute bool. Mutes all SoundPlayers */
+
+  /// @brief Whether the board is currently muted or not.
   int mute;
 
-  /* Enables the deadlines of the SoundPlayers */
-  int enable_deadlines;
-
-
-  // Local definitions of the variables
+  /// @brief Whether the board is currently playing a song or not.
   int playing;
+
+  /// @brief The key of the song. Changes the pitch of the notes.
   int key;
+
+  /// @brief The tempo of the song. Changes the speed of the notes.
   int tempo;
+
+  /// @brief The volume of the song. Changes the loudness of the notes.
   int volume;
 
+
+  /// @brief The mode of the board. Can be either conductor or musician mode.
   int mode;
 } App;
 
@@ -76,12 +84,15 @@ typedef struct {
   }, \
   /* Mute bool */ \
   0, \
+  /* Playing bool */ \
+  0, \
   /*Allows deadlines*/ \
   0, \
-  0, \
-  0, \
+  /*Allows deadlines*/ \
   120, \
+  /*Allows deadlines*/ \
   5, \
+  /*Allows deadlines*/ \
   CONDUCTOR_MODE \
 }
 

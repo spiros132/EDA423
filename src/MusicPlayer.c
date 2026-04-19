@@ -2,7 +2,7 @@
 #include "TinyTimber.h"
 #include "canTinyTimber.h"
 #include "sciTinyTimber.h"
-#include <stdlib.h> 
+#include <stdlib.h>
 #include <math.h>
 
 extern Serial sci0;
@@ -99,7 +99,7 @@ void decrease_volume(MusicPlayer *self, int delta) {
 /* Plays the tone */
 void play_music(MusicPlayer *self, int unused) {
   self->playing = true;
-  
+
   // Call the next_note function
   self->next_note_msg = ASYNC(self, next_note, 0);
 }
@@ -112,11 +112,8 @@ void stop_music(MusicPlayer *self, int unused) {
 
 // Pauses the music, it continues from where it's left off
 void pause_music(MusicPlayer *self, int unused) {
-  ABORT(self->next_note_msg);
-  ABORT(self->finish_note_msg);
-  self->next_note_msg = NULL;
-  self->finish_note_msg = NULL;
-  
+  abort_msg(self, 0);
+
   self->playing = false;
   SYNC(&soundPlayer, set_playing, false);
 }
@@ -132,12 +129,47 @@ void toggle_music(MusicPlayer *self, int unused) {
   }
 }
 
+void abort_msg(MusicPlayer *self, int unused) {
+  ABORT(self->next_note_msg);
+  ABORT(self->finish_note_msg);
+
+  self->next_note_msg = NULL;
+  self->finish_note_msg = NULL;
+}
+
+void play_note(MusicPlayer *self, int index) {
+  if (self->muted) {
+    return;
+  }
+
+  int period = calc_period(self->notes[index] + self->key);
+  ASYNC(&soundPlayer, set_period, period);
+  SYNC(&soundPlayer, set_playing, true);
+
+  // Get the beat time, convert from beats per minute, to how many milliseconds for one beat.
+  // In the beats list we count a half beat as 1x, one beat as 2x and two beats as 4x.
+  // 30000 = (60/2 (because of the above reason)) * 1000 (for milliseconds)
+  int mspb = self->beats[index] * (30000.0 / self->tempo) - 50;
+  // bpm = beats/minute
+  // x = millisekunder/beat
+  // 60/bpm = (60/2*minute)/beat * 1000
+
+  // Schedule the play_tone to play almost immediately
+  SEND(MSEC(50), MAX_LAG_DEADLINE, &self->super, play_tone, true);
+
+  self->finish_note_msg = SEND(MSEC(mspb), MAX_LAG_DEADLINE, self, stop_note, 0);
+}
+
+void stop_note(MusicPlayer *self, int unused) {
+  SYNC(&soundPlayer, set_playing, false);
+}
+
 void next_note(MusicPlayer *self, int unused) {
   // Change the current note:
   // - Get the period of the node with the index "index"
   // - Set the period on the sound player
   // - Set the current index and do mod on it in case it gets to the end
-  
+
   int period = calc_period(self->notes[self->index] + self->key);
   ASYNC(&soundPlayer, set_period, period);
 
@@ -145,15 +177,15 @@ void next_note(MusicPlayer *self, int unused) {
   SYNC(&soundPlayer, set_playing, true);
   /* Play the tone */
   ASYNC(&soundPlayer, play_tone, true);
-  
-  // Get the beat time, convert from beats per minute, to how many milliseconds for one beat. 
+
+  // Get the beat time, convert from beats per minute, to how many milliseconds for one beat.
   // In the beats list we count a half beat as 1x, one beat as 2x and two beats as 4x.
   // 30000 = (60/2 (because of the above reason)) * 1000 (for milliseconds)
   int mspb = self->beats[self->index] * (30000.0 / self->tempo) - 50;
   // bpm = beats/minute
   // x = millisekunder/beat
   // 60/bpm = (60/2*minute)/beat * 1000
-  
+
   // Schedule the play_tone to play almost immediately
   SEND(MSEC(50), MAX_LAG_DEADLINE, &self->super, play_tone, true);
 

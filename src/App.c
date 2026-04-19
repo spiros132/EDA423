@@ -3,9 +3,13 @@
 #include "TinyTimber.h"
 #include "canTinyTimber.h"
 #include "sciTinyTimber.h"
-#include "CANDefinitions.h"
-#include <stdlib.h> 
+#include "CANHelper.h"
+#include "Musician.h"
+#include "Conductor.h"
+#include "Definitions.h"
+#include <stdlib.h>
 #include <math.h>
+#include <stdio.h>
 
 extern App app;
 extern MusicPlayer musicPlayer;
@@ -28,7 +32,7 @@ void periodLookup(App *self, int key) {
     if (i != 0) {
       SCI_WRITE(&sci0, ", ");
     }
-    
+
     char strBuffer[BUFFERLENGTH];
     itoa(self->period[ x(self->song[i] + key) ] , strBuffer, 10);
 
@@ -57,71 +61,21 @@ void clear_input(App *self, int unused) {
   self->bufferLength = 0;
 }
 
-void send_can_message(unsigned char msgId, char buff[]) {
-  CANMsg msg;
-
-  msg.nodeId = 1;
-  msg.msgId = msgId;
-
-  // Copy over the buffer
-  for(int i = 0; i < CAN_BUFSIZE; i++) {
-    // Check for null terminator;
-    msg.buff[i] = (unsigned char)buff[i];
-
-    if (buff[i] == 0) {
-      msg.length = i;
-      break;
-    }
-  }
-
-  CAN_SEND(&can0, &msg);
-}
-
-void send_can_message_int(unsigned char msgId, int value) {
-  char buffer[CAN_BUFSIZE];
-  itoa(value, buffer, 10);
-  send_can_message(msgId, buffer);
-}
-
-void send_can_message_null(unsigned char msgId) {
-  char buffer[CAN_BUFSIZE] = {0};
-  send_can_message(msgId, buffer);
-}
-
 void receiver(App *self, int unused) {
   CANMsg msg;
   CAN_RECEIVE(&can0, &msg);
 
-  int value = atoi((const char *)msg.buff);
-  
-  if (msg.msgId == FLAG_START) {
-    SCI_WRITE(&sci0, "Start can command \n");
-    if(self->mode == CONDUCTOR_MODE) return;
-    SYNC(&musicPlayer, play_music, 0);
-  } else if (msg.msgId == FLAG_STOP) {
-    SCI_WRITE(&sci0, "Stop can command \n");
-    if(self->mode == CONDUCTOR_MODE) return;
-    SYNC(&musicPlayer, stop_music, 0);
-  } else if (msg.msgId == FLAG_MUTE) {
-    SCI_WRITE(&sci0, "Mute can command \n");
-    if(self->mode == CONDUCTOR_MODE) return;
-    self->mute = true;
-  } else if (msg.msgId == FLAG_UNMUTE) {
-    SCI_WRITE(&sci0, "Unmute can command \n");
-    if(self->mode == CONDUCTOR_MODE) return;
-    self->mute = false;
-  } else if (msg.msgId == FLAG_KEY) {
-    SCI_WRITE(&sci0, "Change key can command \n");
-    if(self->mode == CONDUCTOR_MODE) return;
-    ASYNC(&musicPlayer, set_key, value);
-  } else if (msg.msgId == FLAG_TEMPO) {
-    SCI_WRITE(&sci0, "Change tempo can command \n");
-    if(self->mode == CONDUCTOR_MODE) return;
-    ASYNC(&musicPlayer, set_tempo, value);
-  } else if (msg.msgId == FLAG_VOLUME) {
-    SCI_WRITE(&sci0, "Change volume can command \n");
-    if(self->mode == CONDUCTOR_MODE) return;
-    ASYNC(&soundPlayer, set_volume, value);
+  if(self->mode == MUSICIAN_MODE) {
+    musician_receive_can_message(&msg);
+  } else if (self->mode == CONDUCTOR_MODE) {
+    conductor_receive_can_message(&msg);
+  } else {
+    SCI_WRITE(&sci0, "Mode is invalid in receiver: ");
+
+    char strBuffer[10];
+    sprintf(strBuffer, "%d", self->mode);
+    SCI_WRITE(&sci0, strBuffer);
+    SCI_WRITECHAR(&sci0, '\n');
   }
 
   char buff[CAN_BUFSIZE];
@@ -157,7 +111,7 @@ void reader(App *self, int c) {
   self->buffer[self->bufferLength] = (char)c;
   switch ((char)c)
   {
-  case DELIMITER:
+  case KEY_SUBMIT:
     SCI_WRITECHAR(&sci0, '\n');
 
     /* Finish the digit/number */
@@ -170,7 +124,7 @@ void reader(App *self, int c) {
     SCI_WRITE(&sci0, strBuffer);
     SCI_WRITECHAR(&sci0, '\n');
     break;
-  case 'f':
+  case KEY_RESET:
     /* Reset button */
     self->historyLength = 0;
     self->history[0] = 0;
@@ -178,7 +132,7 @@ void reader(App *self, int c) {
     self->history[2] = 0;
     SCI_WRITE(&sci0, "The 3-history has been erased.\n");
     break;
-  case 'q':
+  case KEY_VOLUME_INC:
     /* Increase the volume */
     if (self->mode == CONDUCTOR_MODE) {
       ASYNC(&musicPlayer, increase_volume, 1);
@@ -187,9 +141,9 @@ void reader(App *self, int c) {
     if(self->volume > 20) {
       self->volume = 20;
     }
-    send_can_message_int(FLAG_VOLUME, self->volume);
+    //send_can_message_int(PRIORITY_CONDUCTOR, TYPE_, self->volume);
     break;
-  case 'a':
+  case KEY_VOLUME_DEC:
     /* Decrease the volume */
     if (self->mode == CONDUCTOR_MODE) {
       ASYNC(&musicPlayer, decrease_volume, 1);
@@ -198,21 +152,21 @@ void reader(App *self, int c) {
     if(self->volume < 0) {
       self->volume = 0;
     }
-    send_can_message_int(FLAG_VOLUME, self->volume);
+    //send_can_message_int(FLAG_VOLUME, self->volume);
     break;
-  case 'm':
+  case KEY_MUTE:
     /* Toggle the mute */
     int mute = SYNC(&musicPlayer, get_mute, 0);
     if (self->mode == CONDUCTOR_MODE) {
        ASYNC(&musicPlayer, set_mute, !mute);
     }
     if(mute) {
-      send_can_message_null(FLAG_MUTE);
+      //send_can_message_null(FLAG_MUTE);
     } else {
-      send_can_message_null(FLAG_UNMUTE);
+      //send_can_message_null(FLAG_UNMUTE);
     }
     break;
-  case 'v':
+  case KEY_SET_VOLUME:
     // Change the volume through the input buffer.
     // Finish the input
     SCI_WRITECHAR(&sci0, '\n');
@@ -226,7 +180,7 @@ void reader(App *self, int c) {
     if (self->mode == CONDUCTOR_MODE) {
       ASYNC(&musicPlayer, set_volume, volume);
     }
-    send_can_message_int(FLAG_VOLUME, volume);
+    //send_can_message_int(FLAG_VOLUME, volume);
 
     itoa(volume, strBuffer, 10);
 
@@ -234,7 +188,7 @@ void reader(App *self, int c) {
     SCI_WRITE(&sci0, strBuffer);
     SCI_WRITECHAR(&sci0, '\n');
     break;
-  case 'k':
+  case KEY_SET_KEY:
     // Change the key through the input buffer.
     // Finish the input
     SCI_WRITECHAR(&sci0, '\n');
@@ -248,8 +202,8 @@ void reader(App *self, int c) {
     if (self->mode == CONDUCTOR_MODE) {
       ASYNC(&musicPlayer, set_key, key);
     }
-    
-    send_can_message_int(FLAG_KEY, key);
+
+    send_can_message_int(PRIORITY_CONDUCTOR, TYPE_SET_KEY, key);
 
     itoa(key, strBuffer, 10);
 
@@ -257,7 +211,7 @@ void reader(App *self, int c) {
     SCI_WRITE(&sci0, strBuffer);
     SCI_WRITECHAR(&sci0, '\n');
     break;
-  case 't':
+  case KEY_SET_TEMPO:
     // Change the key through the input buffer.
     // Finish the input
     SCI_WRITECHAR(&sci0, '\n');
@@ -271,7 +225,7 @@ void reader(App *self, int c) {
     if (self->mode == CONDUCTOR_MODE) {
       ASYNC(&musicPlayer, set_tempo, tempo);
     }
-    send_can_message_int(FLAG_TEMPO, tempo);
+    send_can_message_int(PRIORITY_CONDUCTOR, TYPE_SET_TEMPO, tempo);
 
     itoa(tempo, strBuffer, 10);
 
@@ -279,23 +233,23 @@ void reader(App *self, int c) {
     SCI_WRITE(&sci0, strBuffer);
     SCI_WRITECHAR(&sci0, '\n');
     break;
-  case 's':
+  case KEY_MUSIC_STOP:
     if (self->mode == CONDUCTOR_MODE) {
       SYNC(&musicPlayer, stop_music, 0);
     }
-    send_can_message_null(FLAG_STOP);
+    send_can_message_null(PRIORITY_CONDUCTOR, TYPE_RESET);
     break;
-  case ' ':
-  case 'p':
+  case KEY_MUSIC_PLAY:
+  case KEY_MUSIC_PLAY_2:
     if (self->mode == CONDUCTOR_MODE) {
       SYNC(&musicPlayer, toggle_music, 0);
     }
     self->playing = !self->playing;
 
     if (self->playing) {
-      send_can_message_null(FLAG_START);
+      send_can_message_null(PRIORITY_CONDUCTOR, TYPE_PLAY);
     } else {
-      send_can_message_null(FLAG_STOP);
+      send_can_message_null(PRIORITY_CONDUCTOR, TYPE_STOP);
     }
     break;
   case '-':
@@ -320,8 +274,6 @@ void reader(App *self, int c) {
 }
 
 void startApp(App *self, int arg) {
-  CANMsg msg;
-
   CAN_INIT(&can0);
   SCI_INIT(&sci0);
   SCI_WRITE(&sci0, "Hello, hello...\n");

@@ -4,7 +4,7 @@
 #include "TinyTimber.h"
 #include "canTinyTimber.h"
 #include "sciTinyTimber.h"
-#include <stdlib.h> 
+#include <stdlib.h>
 #include <math.h>
 
 extern MusicPlayer musicPlayer;
@@ -15,7 +15,7 @@ void set_playing(SoundPlayer *self, int value) {
     self->play_tone_msg = NULL;
     DAC_REG = 0;
   }
-  
+
   self->playing = value;
 }
 int get_playing(SoundPlayer *self, int unused) {
@@ -32,7 +32,6 @@ int get_period(SoundPlayer *self, int unused) {
 void set_volume(SoundPlayer *self, int value) {
   self->volume = value;
 }
-
 int get_volume(SoundPlayer *self, int unused) {
   return self->volume;
 }

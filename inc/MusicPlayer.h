@@ -41,6 +41,23 @@ void stop_music(MusicPlayer *, int);
 void pause_music(MusicPlayer *, int);
 void toggle_music(MusicPlayer *, int);
 
+/// @brief Aborts all the messages that are currently pending.
+/// @param MusicPlayer The MusicPlayer object.
+/// @param int Not used. Required only for the TinyTimber message signature.
+void abort_msg(MusicPlayer *, int);
+
+
+/// @brief This function plays a singular node
+/// @param MusicPlayer The MusicPlayer object.
+/// @param int The index of the note to play, where 0 is the first index of the period list.
+void play_note(MusicPlayer *, int);
+
+/// @brief This function stops the currently playing note.
+/// @param MusicPlayer The MusicPlayer object.
+/// @param int Not used. Required only for the TinyTimber message signature.
+void stop_note(MusicPlayer *, int);
+
+
 void next_note(MusicPlayer *, int);
 void finish_note(MusicPlayer *, int);
 void increase_volume(MusicPlayer *, int);
