@@ -19,6 +19,7 @@ typedef struct {
   /// @brief The last heartbeat time we have gotten from each group.
   int last_heartbeats[3];
 
+  /// @brief The current conductor of the group.
   int current_conductor;
 } Database;
 
