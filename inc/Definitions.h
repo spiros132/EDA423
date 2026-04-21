@@ -71,4 +71,9 @@
 #define KEY_MUSIC_PLAY_2 ' '
 
 
+/* Debug Definitions */
+
+/// @brief The log level for the project. 0 means no logs, 1 means only important logs, 2 means all logs.
+#define LOG_LEVEL 0
+
 #endif
