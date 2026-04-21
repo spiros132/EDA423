@@ -127,16 +127,7 @@ void reader(App *self, int c) {
     ASYNC(&soundPlayer, soundplayer_decrease_volume, 0);
     break;
   case KEY_MUTE:
-    /* Toggle the mute */
-    int mute = SYNC(&musicPlayer, get_mute, 0);
-    if (self->mode == CONDUCTOR_MODE) {
-       ASYNC(&musicPlayer, set_mute, !mute);
-    }
-    if(mute) {
-      //send_can_message_null(FLAG_MUTE);
-    } else {
-      //send_can_message_null(FLAG_UNMUTE);
-    }
+    ASYNC(&soundPlayer, soundplayer_toggle_muted, 0);
     break;
   case KEY_SET_VOLUME:
     // Change the volume through the input buffer.
