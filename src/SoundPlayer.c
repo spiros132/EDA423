@@ -11,6 +11,26 @@
 extern MusicPlayer musicPlayer;
 extern Serial sci0;
 
+
+void soundplayer_play_tone(SoundPlayer *self, int play) {
+  if(!(self->playing)){
+    ABORT(self->play_tone_msg);
+    self->play_tone_msg = NULL;
+    DAC_REG = 0;
+    return;
+  }
+
+  int muted = self->muted;
+  if (play && (muted == 0)) {
+    DAC_REG = self->volume;
+  } else {
+    DAC_REG = 0;
+  }
+
+  self->play_tone_msg = SEND(USEC(self->current_period), MSEC(50), self, soundplayer_play_tone, !play);
+}
+
+
 void soundplayer_set_playing(SoundPlayer *self, int value) {
   if (!value) {
     ABORT(self->play_tone_msg);
@@ -44,25 +64,10 @@ void soundplayer_set_volume(SoundPlayer *self, int value) {
   SCI_WRITECHAR(&sci0, '\n');
 }
 
-
-void soundplayer_play_tone(SoundPlayer *self, int play) {
-  if(!(self->playing)){
-    ABORT(self->play_tone_msg);
-    self->play_tone_msg = NULL;
-    DAC_REG = 0;
-    return;
-  }
-
-  int muted = self->muted;
-  if(play && (muted == 0)){
-    DAC_REG = self->volume;
-  }
-  else{
-    DAC_REG = 0;
-  }
-
-  self->play_tone_msg = SEND(USEC(self->current_period), MSEC(50), self, soundplayer_play_tone, !play);
+void soundplayer_set_muted(SoundPlayer *self, int muted) {
+  self->muted = muted;
 }
+
 
 void soundplayer_increase_volume(SoundPlayer *self, int unused) {
   int new_volume = self->volume + 1;
@@ -72,4 +77,9 @@ void soundplayer_increase_volume(SoundPlayer *self, int unused) {
 void soundplayer_decrease_volume(SoundPlayer *self, int unused) {
   int new_volume = self->volume - 1;
   soundplayer_set_volume(self, new_volume);
+}
+
+void soundplayer_toggle_muted(SoundPlayer *self, int unused) {
+  int new_muted = !self->muted;
+  soundplayer_set_muted(self, new_muted);
 }
