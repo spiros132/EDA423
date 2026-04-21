@@ -21,14 +21,27 @@ typedef struct {
 
   /// @brief The current conductor of the group.
   int current_conductor;
+
+  /// @brief The current note playing.
+  int current_note_playing;
+
+  /// @brief The current group playing.
+  int current_group_playing;
 } Database;
 
 #define initDatabase() \
 { \
   initObject(), \
+  /* Heartbeats */ \
   {0, 0, 0}, \
+  /* Last heartbeats */ \
   {0, 0, 0}, \
-  GROUP_7 \
+  /* Current conductor */ \
+  GROUP_7, \
+  /* Current note playing */ \
+  0, \
+  /* Current group playing */ \
+  0 \
 }
 
 /// @brief Update the heartbeat of a group.
@@ -45,6 +58,16 @@ void update_last_heartbeat(Database *, int);
 /// @param Database The database object.
 /// @param int The new current conductor.
 void update_current_conductor(Database *, int);
+
+/// @brief Update the current note playing.
+/// @param Database The database object.
+/// @param int The new current note playing.
+void update_current_note_playing(Database *, int);
+
+/// @brief Update the current group playing.
+/// @param Database The database object.
+/// @param int The new current group playing.
+void update_current_group_playing(Database *, int);
 
 
 /// @brief Get the heartbeat of a group.
@@ -64,5 +87,17 @@ int get_last_heartbeat(Database *, int);
 /// @param int Unused parameter.
 /// @return The current conductor of the group.
 int get_current_conductor(Database *, int);
+
+/// @brief Get the current note playing.
+/// @param Database The database object.
+/// @param int Unused parameter.
+/// @return The current note playing.
+int get_current_note_playing(Database *, int);
+
+/// @brief Get the current group playing.
+/// @param Database The database object.
+/// @param int Unused parameter.
+/// @return The current group playing.
+int get_current_group_playing(Database *, int);
 
 #endif
