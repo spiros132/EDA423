@@ -27,15 +27,6 @@ typedef struct {
   /// @brief Whether the board is currently playing a song or not.
   int playing;
 
-  /// @brief The key of the song. Changes the pitch of the notes.
-  int key;
-
-  /// @brief The tempo of the song. Changes the speed of the notes.
-  int tempo;
-
-  /// @brief The volume of the song. Changes the loudness of the notes.
-  int volume;
-
 
   /// @brief The mode of the board. Can be either conductor or musician mode.
   int mode;
@@ -59,12 +50,6 @@ typedef struct {
   0, \
   /* Playing bool */ \
   0, \
-  /* Current key */ \
-  0, \
-  /* Current tempo */ \
-  120, \
-  /* Current volume */ \
-  5, \
   /* Operation Mode */ \
   CONDUCTOR_MODE \
 }

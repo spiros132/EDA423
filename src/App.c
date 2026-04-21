@@ -120,44 +120,11 @@ void reader(App *self, int c) {
     SCI_WRITE(&sci0, "The 3-history has been erased.\n");
     break;
   case KEY_VOLUME_INC:
-    /* Increase the volume */
-    SCI_WRITECHAR(&sci0, '\n');
-
-    int inc_volume = self->volume + 1;
-
-    if (inc_volume > 20) {
-      inc_volume = 20;
-    }
-
-    // Send the volume down to the sound player.
-    self->volume = inc_volume;
-    ASYNC(&soundPlayer, soundplayer_set_volume, inc_volume);
-
-    itoa(inc_volume, strBuffer, 10);
-
-    SCI_WRITE(&sci0, "Volume set: ");
-    SCI_WRITE(&sci0, strBuffer);
-    SCI_WRITECHAR(&sci0, '\n');
+    ASYNC(&soundPlayer, soundplayer_increase_volume, 0);
     break;
   case KEY_VOLUME_DEC:
     /* Decrease the volume */
-    SCI_WRITECHAR(&sci0, '\n');
-
-    int dec_volume = self->volume - 1;
-
-    if (dec_volume < 0) {
-      dec_volume = 0;
-    }
-
-    // Send the volume down to the sound player.
-    self->volume = dec_volume;
-    ASYNC(&soundPlayer, soundplayer_set_volume, dec_volume);
-
-    itoa(dec_volume, strBuffer, 10);
-
-    SCI_WRITE(&sci0, "Volume set: ");
-    SCI_WRITE(&sci0, strBuffer);
-    SCI_WRITECHAR(&sci0, '\n');
+    ASYNC(&soundPlayer, soundplayer_decrease_volume, 0);
     break;
   case KEY_MUTE:
     /* Toggle the mute */
@@ -188,7 +155,6 @@ void reader(App *self, int c) {
     }
 
     // Send the volume down to the sound player.
-    self->volume = volume;
     ASYNC(&soundPlayer, soundplayer_set_volume, volume);
 
     itoa(volume, strBuffer, 10);
@@ -198,34 +164,24 @@ void reader(App *self, int c) {
     SCI_WRITECHAR(&sci0, '\n');
     break;
   case KEY_SET_KEY:
-    // Change the key through the input buffer.
-    // Finish the input
-    SCI_WRITECHAR(&sci0, '\n');
-
-    /* Finish the digit/number */
     finish_input(self, 0);
 
-    int key = self->history[0];
-    self->key = key;
-
     if (self->mode == CONDUCTOR_MODE) {
+      int key = self->history[0];
+
       ASYNC(&musicPlayer, set_key, key);
+
+      send_can_message_int(PRIORITY_CONDUCTOR, TYPE_SET_KEY, key);
+
+      itoa(key, strBuffer, 10);
+
+      SCI_WRITECHAR(&sci0, '\n');
+      SCI_WRITE(&sci0, "Key set: ");
+      SCI_WRITE(&sci0, strBuffer);
+      SCI_WRITECHAR(&sci0, '\n');
     }
-
-    send_can_message_int(PRIORITY_CONDUCTOR, TYPE_SET_KEY, key);
-
-    itoa(key, strBuffer, 10);
-
-    SCI_WRITE(&sci0, "Key set: ");
-    SCI_WRITE(&sci0, strBuffer);
-    SCI_WRITECHAR(&sci0, '\n');
     break;
   case KEY_SET_TEMPO:
-    // Change the key through the input buffer.
-    // Finish the input
-    SCI_WRITECHAR(&sci0, '\n');
-
-    /* Finish the digit/number */
     finish_input(self, 0);
 
     if (self->mode == CONDUCTOR_MODE) {
@@ -236,11 +192,11 @@ void reader(App *self, int c) {
       // Debug
       itoa(tempo, strBuffer, 10);
 
+      SCI_WRITECHAR(&sci0, '\n');
       SCI_WRITE(&sci0, "Tempo set: ");
       SCI_WRITE(&sci0, strBuffer);
       SCI_WRITECHAR(&sci0, '\n');
     }
-
     break;
   case KEY_MUSIC_STOP:
     if (self->mode == CONDUCTOR_MODE) {
