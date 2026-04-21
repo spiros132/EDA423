@@ -19,7 +19,6 @@ extern Can can0;
 extern Serial sci0;
 
 
-
 void musician_receive_can_message(CANMsg* msg) {
   int priority = get_priority(msg->msgId);
 
@@ -66,7 +65,7 @@ void musician_receive_can_message(CANMsg* msg) {
   } else if (priority == PRIORITY_CONDUCTOR) {
     // Conductor message.
     int type = get_type(msg->buff);
-    int buff_value = get_buffer_value(msg->buff);
+    int buff_value = get_buffer_value_int(msg->buff);
 
     if (type == TYPE_NOTE_TO_PLAY) {
       ASYNC(&musicPlayer, play_note, buff_value);
