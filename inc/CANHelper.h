@@ -18,7 +18,14 @@ int get_type(unsigned char buffer[8]);
 /// @brief Get the value from the CAN message buffer.
 /// @param buffer The buffer of the CAN message.
 /// @return The value from the CAN message buffer, or -1 if the value is unknown.
-int get_buffer_value(unsigned char buffer[8]);
+int get_buffer_value_int(unsigned char buffer[8]);
+
+/// @brief Get a slice of the buffer.
+/// @param buffer The buffer of the CAN message.
+/// @param start The start index of the slice. Must be between 1 and 7 inclusive.
+/// @param offset The offset from the start index. Must be non-negative and combined with the start index must be between 1 and 7 inclusive.
+/// @return The value of the slice, or -1 if the slice is invalid.
+int get_buffer_value_slice(unsigned char buffer[8], int start, int offset);
 
 
 /// @brief Receive a CAN message, this function is for the general functionality that both conductor and musician mode will use.

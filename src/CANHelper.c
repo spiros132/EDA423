@@ -30,7 +30,7 @@ int get_type(unsigned char buffer[8]) {
   return -1;
 }
 
-int get_buffer_value(unsigned char buffer[8]) {
+int get_buffer_value_int(unsigned char buffer[8]) {
   // Buffer starts at index 1, since index 0 is used for the type.
   char strBuffer[8];
   for (int i = 0; i < 7; i++) {
@@ -44,8 +44,22 @@ int get_buffer_value(unsigned char buffer[8]) {
   return atoi(strBuffer);
 }
 
+int get_buffer_value_slice(unsigned char buffer[8], int start, int offset) {
+  // Check that we have gotten correct values.
+  if (start - offset < 1 || start + offset > 7 || offset < 0 || start < 1) {
+    return -1;
+  }
+
+  int value = buffer[start];
+  for (int i = 1; i <= offset; i++) {
+    value = (value << 8) | buffer[start + i];
+  }
+
+  return value;
+}
+
 void receive_can_message(CANMsg* msg) {
-int priority = get_priority(msg->msgId);
+  int priority = get_priority(msg->msgId);
 
   if (priority == PRIORITY_HEARTBEAT) {
     // Heartbeat message.
@@ -90,10 +104,12 @@ int priority = get_priority(msg->msgId);
   } else if (priority == PRIORITY_CONDUCTOR) {
     // Conductor message.
     int type = get_type(msg->buff);
-    int buff_value = get_buffer_value(msg->buff);
+    int buff_value = get_buffer_value_int(msg->buff);
 
     switch (type) {
       case TYPE_NOTE_TO_PLAY:
+        // Check are we supposed to be playing this note?
+        int buff_note = get_buffer_value_slice(msg->buff, 0, 3);
         ASYNC(&musicPlayer, play_note, buff_value);
         break;
       case TYPE_RESET:
