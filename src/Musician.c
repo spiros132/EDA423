@@ -40,7 +40,7 @@ void musician_receive_can_message(CANMsg* msg) {
       SYNC(&musicPlayer, set_tempo, tempo);
       SYNC(&musicPlayer, set_key, key);
     } else {
-      SCI_WRITE(&sci0, "Received type: ");
+      SCI_WRITE(&sci0, "ERROR | CONDUCTOR SEND STATE | Received type: ");
 
       // Char can only be maximum three characters long + null terminator.
       char strBuffer[10];
@@ -55,7 +55,7 @@ void musician_receive_can_message(CANMsg* msg) {
     if (type == TYPE_CONDUCTOR_CLAIM) {
       SYNC(&database, update_current_conductor, msg->nodeId);
     } else {
-      SCI_WRITE(&sci0, "Received type: ");
+      SCI_WRITE(&sci0, "ERROR | CONDUCTOR CLAIM | Received type: ");
 
       // Char can only be maximum three characters long + null terminator.
       char strBuffer[10];
@@ -81,7 +81,7 @@ void musician_receive_can_message(CANMsg* msg) {
     } else if (type == TYPE_SET_KEY) {
       ASYNC(&musicPlayer, set_key, buff_value);
     } else {
-      SCI_WRITE(&sci0, "Received type: ");
+      SCI_WRITE(&sci0, "ERROR | CONDUCTOR | Received type: ");
 
       // Char can only be maximum three characters long + null terminator.
       char strBuffer[10];
@@ -90,7 +90,7 @@ void musician_receive_can_message(CANMsg* msg) {
       SCI_WRITECHAR(&sci0, '\n');
     }
   } else {
-    SCI_WRITE(&sci0, "Received CAN message with ID: ");
+    SCI_WRITE(&sci0, "ERROR | Received CAN message with ID: ");
 
     // Char can only be maximum three characters long + null terminator.
     char strBuffer[4];
