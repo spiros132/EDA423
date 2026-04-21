@@ -21,16 +21,6 @@ typedef struct {
   int historyLength;
 
 
-  /// @brief The index of the current note playing in the song.
-  int songIndex;
-
-  /// @brief The notes of the song.
-  int song[32];
-
-  /// @brief The period of the notes in the song.
-  int period[25];
-
-
   /// @brief Whether the board is currently muted or not.
   int mute;
 
@@ -65,34 +55,17 @@ typedef struct {
   {0, 0, 0}, \
   /* History Length */ \
   0, \
-  \
-  /* Song Index */ \
-  0, \
-  /* Song */ \
-  { \
-    0, 2, 4,  0, 0, 2,  4, 0, \
-    4, 5, 7,  4, 5, 7,  7, 9, \
-    7, 5, 4,  0, 7, 9,  7, 5, \
-    4, 0, 0, -5, 0, 0, -5, 0  \
-  }, \
-  { \
-    2025, 1911, 1804, 1703, 1607, \
-    1517, 1432, 1351, 1276, 1204, \
-    1136, 1073, 1012,  956,  902, \
-      851,  804,  758,  716,  676, \
-      638,  602,  568,  536,  506  \
-  }, \
   /* Mute bool */ \
   0, \
   /* Playing bool */ \
   0, \
-  /*Allows deadlines*/ \
+  /* Current key */ \
   0, \
-  /*Allows deadlines*/ \
+  /* Current tempo */ \
   120, \
-  /*Allows deadlines*/ \
+  /* Current volume */ \
   5, \
-  /*Allows deadlines*/ \
+  /* Operation Mode */ \
   CONDUCTOR_MODE \
 }
 
@@ -100,7 +73,21 @@ typedef struct {
 void reader(App *, int);
 void receiver(App *, int);
 void startApp(App *, int);
+
+/// @brief Finishes the input and updates the history list.
+/// @param App The app object.
+/// @param int Unused parameter.
 void finish_input(App *, int);
+
+/// @brief Clears the input buffer and resets the buffer length.
+/// @param App The app object.
+/// @param int Unused parameter.
 void clear_input(App *, int);
+
+
+/// @brief The loop that will send heartbeats to the other boards.
+/// @param App The app object.
+/// @param int Unused parameter.
+void heartbeat_tick(App *, int);
 
 #endif

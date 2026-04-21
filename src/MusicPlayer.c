@@ -94,7 +94,7 @@ void pause_music(MusicPlayer *self, int unused) {
   abort_msg(self, 0);
 
   self->playing = false;
-  SYNC(&soundPlayer, set_playing, false);
+  SYNC(&soundPlayer, soundplayer_set_playing, false);
 }
 
 // Toggle music between play / pause
@@ -122,8 +122,8 @@ void play_note(MusicPlayer *self, int index) {
   }
 
   int period = calc_period(self->notes[index] + self->key);
-  ASYNC(&soundPlayer, set_period, period);
-  SYNC(&soundPlayer, set_playing, true);
+  ASYNC(&soundPlayer, soundplayer_set_period, period);
+  SYNC(&soundPlayer, soundplayer_set_playing, true);
 
   // Get the beat time, convert from beats per minute, to how many milliseconds for one beat.
   // In the beats list we count a half beat as 1x, one beat as 2x and two beats as 4x.
@@ -134,13 +134,13 @@ void play_note(MusicPlayer *self, int index) {
   // 60/bpm = (60/2*minute)/beat * 1000
 
   // Schedule the play_tone to play almost immediately
-  SEND(MSEC(50), MAX_LAG_DEADLINE, &self->super, play_tone, true);
+  SEND(MSEC(50), MAX_LAG_DEADLINE, &self->super, soundplayer_play_tone, true);
 
   self->finish_note_msg = SEND(MSEC(mspb), MAX_LAG_DEADLINE, self, stop_note, 0);
 }
 
 void stop_note(MusicPlayer *self, int unused) {
-  SYNC(&soundPlayer, set_playing, false);
+  SYNC(&soundPlayer, soundplayer_set_playing, false);
 }
 
 void next_note(MusicPlayer *self, int unused) {
@@ -150,12 +150,12 @@ void next_note(MusicPlayer *self, int unused) {
   // - Set the current index and do mod on it in case it gets to the end
 
   int period = calc_period(self->notes[self->index] + self->key);
-  ASYNC(&soundPlayer, set_period, period);
+  ASYNC(&soundPlayer, soundplayer_set_period, period);
 
   /* Activate the musicPlayer */
-  SYNC(&soundPlayer, set_playing, true);
+  SYNC(&soundPlayer, soundplayer_set_playing, true);
   /* Play the tone */
-  ASYNC(&soundPlayer, play_tone, true);
+  ASYNC(&soundPlayer, soundplayer_play_tone, true);
 
   // Get the beat time, convert from beats per minute, to how many milliseconds for one beat.
   // In the beats list we count a half beat as 1x, one beat as 2x and two beats as 4x.
@@ -166,7 +166,7 @@ void next_note(MusicPlayer *self, int unused) {
   // 60/bpm = (60/2*minute)/beat * 1000
 
   // Schedule the play_tone to play almost immediately
-  SEND(MSEC(50), MAX_LAG_DEADLINE, &soundPlayer, play_tone, true);
+  SEND(MSEC(50), MAX_LAG_DEADLINE, &soundPlayer, soundplayer_play_tone, true);
 
   // Schedule the finish_note function
   self->finish_note_msg = SEND(MSEC(mspb), MAX_LAG_DEADLINE, self, finish_note, 0);
@@ -175,7 +175,7 @@ void next_note(MusicPlayer *self, int unused) {
 }
 
 void finish_note(MusicPlayer *self, int unused) {
-  SYNC(&soundPlayer, set_playing, false);
+  SYNC(&soundPlayer, soundplayer_set_playing, false);
 
   // Schedule the next_note function
   // Run next_note after 50 ms and make it so that it should have finished putting all the settings etc after 100

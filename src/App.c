@@ -22,26 +22,6 @@ int x(int k) {
   return k - (-10);
 }
 
-/* Lookup and print the Broder Jacob periods */
-void periodLookup(App *self, int key) {
-  if(-5 > key && key > 5) return;
-
-  SCI_WRITE(&sci0, "This is the period list: [");
-
-  for (int i = 0; i < sizeof(self->song) / sizeof(self->song[0]); i++) {
-    if (i != 0) {
-      SCI_WRITE(&sci0, ", ");
-    }
-
-    char strBuffer[BUFFERLENGTH];
-    itoa(self->period[ x(self->song[i] + key) ] , strBuffer, 10);
-
-    SCI_WRITE(&sci0, strBuffer);
-  }
-
-  SCI_WRITE(&sci0, "]\n");
-}
-
 void finish_input(App *self, int unused) {
   self->buffer[self->bufferLength] = '\0';
 
@@ -55,6 +35,13 @@ void finish_input(App *self, int unused) {
   }
 
   clear_input(self, unused);
+}
+
+void heartbeat_tick(App *self, int unused) {
+  // Send a heartbeat message every 200ms.
+  send_can_message_null(PRIORITY_HEARTBEAT, TYPE_HEARTBEAT);
+
+  SEND(MSEC(200), MAX_LAG_DEADLINE, self, heartbeat_tick, 0);
 }
 
 void clear_input(App *self, int unused) {
@@ -136,14 +123,15 @@ void reader(App *self, int c) {
     /* Increase the volume */
     SCI_WRITECHAR(&sci0, '\n');
 
-    int inc_volume = SYNC(&soundPlayer, get_volume, 0) + 1;
+    int inc_volume = self->volume + 1;
 
     if (inc_volume > 20) {
       inc_volume = 20;
     }
 
+    // Send the volume down to the sound player.
     self->volume = inc_volume;
-    ASYNC(&soundPlayer, set_volume, inc_volume);
+    ASYNC(&soundPlayer, soundplayer_set_volume, inc_volume);
 
     itoa(inc_volume, strBuffer, 10);
 
@@ -155,14 +143,15 @@ void reader(App *self, int c) {
     /* Decrease the volume */
     SCI_WRITECHAR(&sci0, '\n');
 
-    int dec_volume = SYNC(&soundPlayer, get_volume, 0) - 1;
+    int dec_volume = self->volume - 1;
 
     if (dec_volume < 0) {
       dec_volume = 0;
     }
 
+    // Send the volume down to the sound player.
     self->volume = dec_volume;
-    ASYNC(&soundPlayer, set_volume, dec_volume);
+    ASYNC(&soundPlayer, soundplayer_set_volume, dec_volume);
 
     itoa(dec_volume, strBuffer, 10);
 
@@ -198,8 +187,9 @@ void reader(App *self, int c) {
       volume = 20;
     }
 
+    // Send the volume down to the sound player.
     self->volume = volume;
-    ASYNC(&soundPlayer, set_volume, volume);
+    ASYNC(&soundPlayer, soundplayer_set_volume, volume);
 
     itoa(volume, strBuffer, 10);
 
@@ -238,37 +228,29 @@ void reader(App *self, int c) {
     /* Finish the digit/number */
     finish_input(self, 0);
 
-    int tempo = self->history[0];
-    self->tempo = tempo;
-
     if (self->mode == CONDUCTOR_MODE) {
-      ASYNC(&musicPlayer, set_tempo, tempo);
+      int tempo = self->history[0];
+
+      conductor_send_tempo(tempo);
+
+      // Debug
+      itoa(tempo, strBuffer, 10);
+
+      SCI_WRITE(&sci0, "Tempo set: ");
+      SCI_WRITE(&sci0, strBuffer);
+      SCI_WRITECHAR(&sci0, '\n');
     }
-    send_can_message_int(PRIORITY_CONDUCTOR, TYPE_SET_TEMPO, tempo);
 
-    itoa(tempo, strBuffer, 10);
-
-    SCI_WRITE(&sci0, "Tempo set: ");
-    SCI_WRITE(&sci0, strBuffer);
-    SCI_WRITECHAR(&sci0, '\n');
     break;
   case KEY_MUSIC_STOP:
     if (self->mode == CONDUCTOR_MODE) {
-      SYNC(&musicPlayer, stop_music, 0);
+      conductor_send_stop();
     }
-    send_can_message_null(PRIORITY_CONDUCTOR, TYPE_RESET);
     break;
   case KEY_MUSIC_PLAY:
   case KEY_MUSIC_PLAY_2:
     if (self->mode == CONDUCTOR_MODE) {
-      SYNC(&musicPlayer, toggle_music, 0);
-    }
-    self->playing = !self->playing;
-
-    if (self->playing) {
-      send_can_message_null(PRIORITY_CONDUCTOR, TYPE_PLAY);
-    } else {
-      send_can_message_null(PRIORITY_CONDUCTOR, TYPE_STOP);
+      conductor_send_play();
     }
     break;
   case '-':
@@ -297,6 +279,8 @@ void startApp(App *self, int arg) {
   SCI_INIT(&sci0);
   SCI_WRITE(&sci0, "Hello, hello...\n");
   SCI_WRITE(&sci0, "Enter integer: \n");
+
+  heartbeat_tick(self, 0);
 }
 
 int main() {
