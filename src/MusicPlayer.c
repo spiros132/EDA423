@@ -11,104 +11,123 @@ extern SoundPlayer soundPlayer;
 // HELPER FUNCTIONS
 
 /* Calculate the period for the specified frequeny index */
-int calc_period(int frequency_index){
-  double frequency = 440.0 * pow(2.0, (double) frequency_index / 12.0);
+int calc_period(int frequency_index)
+{
+  double frequency = 440.0 * pow(2.0, (double)frequency_index / 12.0);
   double period = 500000.0 / frequency;
-  return (int) period;
+  return (int)period;
 }
 
-
 // Getters
-int get_tempo(MusicPlayer *self, int unused) {
+int get_tempo(MusicPlayer *self, int unused)
+{
   return self->tempo;
 }
 
-int get_key(MusicPlayer *self, int unused) {
+int get_key(MusicPlayer *self, int unused)
+{
   return self->key;
 }
 
-int get_index(MusicPlayer *self, int unused) {
+int get_index(MusicPlayer *self, int unused)
+{
   return self->index;
 }
 
-int get_mute(MusicPlayer *self, int unused) {
-  return self->muted;
-}
 
 // Setters
-void set_tempo(MusicPlayer *self, int tempo) {
+void set_tempo(MusicPlayer *self, int tempo)
+{
   // Clamp the tempo
-  if (tempo < 60) {
+  if (tempo < 60)
+  {
     tempo = 60;
-  } else if (tempo > 240) {
+  }
+  else if (tempo > 240)
+  {
     tempo = 240;
   }
 
   self->tempo = tempo;
 }
 
-void set_key(MusicPlayer *self, int key) {
+void set_key(MusicPlayer *self, int key)
+{
   // Clamp the key
-  if (key < -5) {
+  if (key < -5)
+  {
     key = -5;
-  } else if (key > 5) {
+  }
+  else if (key > 5)
+  {
     key = 5;
   }
 
   self->key = key;
 }
 
-void set_index(MusicPlayer *self, int index) {
+void set_index(MusicPlayer *self, int index)
+{
   // Clamp the key
-  if (index < 0) {
+  if (index < 0)
+  {
     index = 0;
   }
-  if (index > NOTES_AMOUNT - 1) {
+  if (index > NOTES_AMOUNT - 1)
+  {
     index = NOTES_AMOUNT - 1;
   }
 
   self->index = index;
 }
 
-void set_mute(MusicPlayer *self, int muted) {
-  self->muted = muted;
-}
-
 
 /* Plays the tone */
-void play_music(MusicPlayer *self, int unused) {
-  self->playing = true;
+void play_music(MusicPlayer *self, int unused)
+{
+  if (!self->playing) {
+    self->playing = true;
 
-  // Call the next_note function
-  self->next_note_msg = ASYNC(self, next_note, 0);
+    // Call the next_note function
+    self->next_note_msg = ASYNC(self, next_note, 0);
+  }
 }
 
 // Stops the music completely, next time you play it starts from the start.
-void stop_music(MusicPlayer *self, int unused) {
+void stop_music(MusicPlayer *self, int unused)
+{
   pause_music(self, unused);
   set_index(self, 0);
 }
 
 // Pauses the music, it continues from where it's left off
-void pause_music(MusicPlayer *self, int unused) {
-  abort_msg(self, 0);
+void pause_music(MusicPlayer *self, int unused)
+{
+  if (self->playing) {
+    abort_msg(self, 0);
 
-  self->playing = false;
-  SYNC(&soundPlayer, soundplayer_set_playing, false);
+    self->playing = false;
+    SYNC(&soundPlayer, soundplayer_set_playing, false);
+  }
 }
 
 // Toggle music between play / pause
-void toggle_music(MusicPlayer *self, int unused) {
+void toggle_music(MusicPlayer *self, int unused)
+{
   int playing = self->playing;
 
-  if(playing) {
+  if (playing)
+  {
     pause_music(self, unused);
-  } else {
+  }
+  else
+  {
     play_music(self, unused);
   }
 }
 
-void abort_msg(MusicPlayer *self, int unused) {
+void abort_msg(MusicPlayer *self, int unused)
+{
   ABORT(self->next_note_msg);
   ABORT(self->finish_note_msg);
 
@@ -116,11 +135,8 @@ void abort_msg(MusicPlayer *self, int unused) {
   self->finish_note_msg = NULL;
 }
 
-void play_note(MusicPlayer *self, int index) {
-  if (self->muted) {
-    return;
-  }
-
+void play_note(MusicPlayer *self, int index)
+{
   int period = calc_period(self->notes[index] + self->key);
   ASYNC(&soundPlayer, soundplayer_set_period, period);
   SYNC(&soundPlayer, soundplayer_set_playing, true);
@@ -139,11 +155,13 @@ void play_note(MusicPlayer *self, int index) {
   self->finish_note_msg = SEND(MSEC(mspb), MAX_LAG_DEADLINE, self, stop_note, 0);
 }
 
-void stop_note(MusicPlayer *self, int unused) {
+void stop_note(MusicPlayer *self, int unused)
+{
   SYNC(&soundPlayer, soundplayer_set_playing, false);
 }
 
-void next_note(MusicPlayer *self, int unused) {
+void next_note(MusicPlayer *self, int unused)
+{
   // Change the current note:
   // - Get the period of the node with the index "index"
   // - Set the period on the sound player
@@ -174,7 +192,8 @@ void next_note(MusicPlayer *self, int unused) {
   self->index = (self->index + 1) % NOTES_AMOUNT;
 }
 
-void finish_note(MusicPlayer *self, int unused) {
+void finish_note(MusicPlayer *self, int unused)
+{
   SYNC(&soundPlayer, soundplayer_set_playing, false);
 
   // Schedule the next_note function

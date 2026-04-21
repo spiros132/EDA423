@@ -17,7 +17,6 @@ typedef struct {
   int tempo;
   int key;
   int playing;
-  int muted;
 
   Msg next_note_msg;
   Msg finish_note_msg;
@@ -32,7 +31,8 @@ typedef struct {
   120, \
   0, \
   0, \
-  0 \
+  NULL, \
+  NULL \
 }
 
 
@@ -104,11 +104,6 @@ int get_key(MusicPlayer *, int);
 /// @return The index of the music player.
 int get_index(MusicPlayer *, int);
 
-/// @brief Gets the mute state of the music player.
-/// @param MusicPlayer The MusicPlayer object.
-/// @param int Unused parameter.
-/// @return The mute state of the music player. 0 for unmuted, 1 for muted.
-int get_mute(MusicPlayer *, int);
 
 
 /// @brief Sets the tempo of the music player.
@@ -126,9 +121,5 @@ void set_key(MusicPlayer *, int);
 /// @param int The index to set.
 void set_index(MusicPlayer *, int);
 
-/// @brief Sets the mute state of the music player.
-/// @param MusicPlayer The MusicPlayer object.
-/// @param int The mute state to set. 0 for unmuted, 1 for muted.
-void set_mute(MusicPlayer *, int);
 
 #endif
