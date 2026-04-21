@@ -1,6 +1,7 @@
 #ifndef _CAN_HELPER_H
-#define _CAN_HELPER_H
+#define _CAN_HELPER_H4
 
+#include "canTinyTimber.h"
 #include "Definitions.h"
 
 
@@ -18,6 +19,11 @@ int get_type(unsigned char buffer[8]);
 /// @param buffer The buffer of the CAN message.
 /// @return The value from the CAN message buffer, or -1 if the value is unknown.
 int get_buffer_value(unsigned char buffer[8]);
+
+
+/// @brief Receive a CAN message, this function is for the general functionality that both conductor and musician mode will use.
+/// @param msg The CAN message to receive.
+void receive_can_message(CANMsg* msg);
 
 
 /// @brief Send a CAN message with the given message ID and buffer.
