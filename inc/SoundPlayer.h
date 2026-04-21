@@ -9,67 +9,61 @@
 typedef struct {
   Object super;
 
-  /* Bool to stop the recursive calls of the player */
+  /// @brief A boolean value indicating if the player is currently playing a tone.
   int playing;
 
-  /* Period of the current tone */
+  /// @brief The period of the current tone.
   int current_period;
 
-  /* Volume for the player */
+  /// @brief The volume of the SoundPlayer.
   int volume;
+
+  /// @brief Whether the player is muted or not.
+  int muted;
 
   Msg play_tone_msg;
 } SoundPlayer;
 
-#define toSoundPlayer(child) ((SoundPlayer*) child)
-
 #define initSoundPlayer() \
 { \
   initObject(), \
+  /* Playing */ \
   0, \
+  /* Current Period */ \
   0, \
+  /* Volume */ \
   5, \
+  /* Muted */ \
+  0, \
+  /* play_tone_msg */ \
+  NULL \
 }
 
 /// @brief Starts playing the tone
 /// @param SoundPlayer The SoundPlayer object
 /// @param int A boolean value to start or stop the tone.
-void play_tone(SoundPlayer *, int);
+void soundplayer_play_tone(SoundPlayer *, int);
 
 
 /// @brief Sets the playing state of the SoundPlayer
 /// @param SoundPlayer The SoundPlayer object
 /// @param int A boolean value to set the playing state.
-void set_playing(SoundPlayer *, int);
-
-/// @brief Gets the playing state of the SoundPlayer
-/// @param SoundPlayer The SoundPlayer object
-/// @param int Unused parameter
-/// @return The playing state of the SoundPlayer
-int get_playing(SoundPlayer *, int);
-
+void soundplayer_set_playing(SoundPlayer *, int);
 
 /// @brief Sets the period of the current tone
 /// @param SoundPlayer The SoundPlayer object
 /// @param int The period of the current tone
-void set_period(SoundPlayer *, int);
-
-/// @brief Gets the period of the current tone
-/// @param SoundPlayer The SoundPlayer object
-/// @param int Unused parameter
-/// @return The period of the current tone
-int get_period(SoundPlayer *, int);
-
+void soundplayer_set_period(SoundPlayer *, int);
 
 /// @brief Sets the volume of the SoundPlayer
 /// @param SoundPlayer The SoundPlayer object
 /// @param int The volume of the SoundPlayer
-void set_volume(SoundPlayer *, int);
+void soundplayer_set_volume(SoundPlayer *, int);
 
-/// @brief Gets the volume of the SoundPlayer
+/// @brief Sets the muted state of the SoundPlayer
 /// @param SoundPlayer The SoundPlayer object
-/// @param int Unused parameter
-/// @return The volume of the SoundPlayer
-int get_volume(SoundPlayer *, int);
+/// @param int A boolean value to set the muted state.
+void soundplayer_set_muted(SoundPlayer *, int);
+
 
 #endif
