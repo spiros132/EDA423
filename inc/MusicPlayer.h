@@ -35,11 +35,27 @@ typedef struct {
   0 \
 }
 
-// Public functions
+
+/// @brief Start playing the music.
+/// @param MusicPlayer The MusicPlayer object.
+/// @param int Unused parameter.
 void play_music(MusicPlayer *, int);
+
+/// @brief Stop playing the music and reset the index to 0.
+/// @param MusicPlayer The MusicPlayer object.
+/// @param int Unused parameter.
 void stop_music(MusicPlayer *, int);
+
+/// @brief Pauses the music without resetting the index.
+/// @param MusicPlayer The MusicPlayer object.
+/// @param int Unused parameter.
 void pause_music(MusicPlayer *, int);
+
+/// @brief Toggles the play/pause state of the music player.
+/// @param MusicPlayer The MusicPlayer object.
+/// @param int Unused parameter.
 void toggle_music(MusicPlayer *, int);
+
 
 /// @brief Aborts all the messages that are currently pending.
 /// @param MusicPlayer The MusicPlayer object.
@@ -47,7 +63,7 @@ void toggle_music(MusicPlayer *, int);
 void abort_msg(MusicPlayer *, int);
 
 
-/// @brief This function plays a singular node
+/// @brief This function plays a singular note.
 /// @param MusicPlayer The MusicPlayer object.
 /// @param int The index of the note to play, where 0 is the first index of the period list.
 void play_note(MusicPlayer *, int);
@@ -58,19 +74,61 @@ void play_note(MusicPlayer *, int);
 void stop_note(MusicPlayer *, int);
 
 
+/// @brief Start playing the song by yourself, deprecated functionality for the HA1.
+/// @param MusicPlayer The MusicPlayer object.
+/// @param int Unused parameter.
 void next_note(MusicPlayer *, int);
+
+/// @brief This function is called when a note has finished playing. Should ONLY be called from the `next_note` function.
+/// @param MusicPlayer The MusicPlayer object.
+/// @param int Unused parameter.
 void finish_note(MusicPlayer *, int);
 
-// Getters
+
+
+/// @brief Gets the tempo of the music player.
+/// @param MusicPlayer The MusicPlayer object.
+/// @param int Unused parameter.
+/// @return The tempo of the music player.
 int get_tempo(MusicPlayer *, int);
+
+/// @brief Gets the key of the music player.
+/// @param MusicPlayer The MusicPlayer object.
+/// @param int Unused parameter.
+/// @return The key of the music player.
 int get_key(MusicPlayer *, int);
+
+/// @brief Gets the index of the music player.
+/// @param MusicPlayer The MusicPlayer object.
+/// @param int Unused parameter.
+/// @return The index of the music player.
 int get_index(MusicPlayer *, int);
+
+/// @brief Gets the mute state of the music player.
+/// @param MusicPlayer The MusicPlayer object.
+/// @param int Unused parameter.
+/// @return The mute state of the music player. 0 for unmuted, 1 for muted.
 int get_mute(MusicPlayer *, int);
 
-// Setters
+
+/// @brief Sets the tempo of the music player.
+/// @param MusicPlayer The MusicPlayer object.
+/// @param int The tempo to set.
 void set_tempo(MusicPlayer *, int);
+
+/// @brief Sets the key of the music player.
+/// @param MusicPlayer The MusicPlayer object.
+/// @param int The key to set.
 void set_key(MusicPlayer *, int);
+
+/// @brief Sets the index of the music player. The index determines which note is currently playing.
+/// @param MusicPlayer The MusicPlayer object.
+/// @param int The index to set.
 void set_index(MusicPlayer *, int);
+
+/// @brief Sets the mute state of the music player.
+/// @param MusicPlayer The MusicPlayer object.
+/// @param int The mute state to set. 0 for unmuted, 1 for muted.
 void set_mute(MusicPlayer *, int);
 
 #endif
