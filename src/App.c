@@ -64,16 +64,6 @@ void receiver(App *self, int unused) {
     SCI_WRITE(&sci0, strBuffer);
     SCI_WRITECHAR(&sci0, '\n');
   }
-
-  char buff[CAN_BUFSIZE];
-  for(int i = 0; i < 8; i++) {
-    buff[i] = (char)msg.buff[i];
-  }
-  buff[7] = '\0';
-
-  SCI_WRITE(&sci0, "Buffer: ");
-  SCI_WRITE(&sci0, buff);
-  SCI_WRITECHAR(&sci0, '\n');
 }
 
 void reader(App *self, int c) {
@@ -93,9 +83,8 @@ void reader(App *self, int c) {
    * See README for use cases.
    */
 
-  char strBuffer[BUFFERLENGTH];
-
   self->buffer[self->bufferLength] = (char)c;
+
   switch ((char)c)
   {
   case KEY_SUBMIT:
@@ -130,29 +119,13 @@ void reader(App *self, int c) {
     ASYNC(&soundPlayer, soundplayer_toggle_muted, 0);
     break;
   case KEY_SET_VOLUME:
-    // Change the volume through the input buffer.
-    // Finish the input
-    SCI_WRITECHAR(&sci0, '\n');
-
     /* Finish the digit/number */
     finish_input(self, 0);
 
     int volume = self->history[0];
 
-    if (volume < 0) {
-      volume = 0;
-    } else if (volume > 20) {
-      volume = 20;
-    }
-
     // Send the volume down to the sound player.
     ASYNC(&soundPlayer, soundplayer_set_volume, volume);
-
-    itoa(volume, strBuffer, 10);
-
-    SCI_WRITE(&sci0, "Volume set: ");
-    SCI_WRITE(&sci0, strBuffer);
-    SCI_WRITECHAR(&sci0, '\n');
     break;
   case KEY_SET_KEY:
     finish_input(self, 0);

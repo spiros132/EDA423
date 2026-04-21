@@ -20,14 +20,6 @@ typedef struct {
   int history[3];
   int historyLength;
 
-
-  /// @brief Whether the board is currently muted or not.
-  int mute;
-
-  /// @brief Whether the board is currently playing a song or not.
-  int playing;
-
-
   /// @brief The mode of the board. Can be either conductor or musician mode.
   int mode;
 } App;
@@ -35,9 +27,7 @@ typedef struct {
 
 #define initApp() \
 { \
-  /* Super */ \
   initObject(), \
-  \
   /* Buffer */ \
   {}, \
   /* Buffer Length*/ \
@@ -45,10 +35,6 @@ typedef struct {
   /* History */ \
   {0, 0, 0}, \
   /* History Length */ \
-  0, \
-  /* Mute bool */ \
-  0, \
-  /* Playing bool */ \
   0, \
   /* Operation Mode */ \
   CONDUCTOR_MODE \
