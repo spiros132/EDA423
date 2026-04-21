@@ -66,4 +66,15 @@ void soundplayer_set_volume(SoundPlayer *, int);
 void soundplayer_set_muted(SoundPlayer *, int);
 
 
+/// @brief Increases the volume of the sound player by 1.
+/// @param SoundPlayer The SoundPlayer object.
+/// @param int Unused parameter.
+void soundplayer_increase_volume(SoundPlayer *, int);
+
+/// @brief Decreases the volume of the sound player by 1.
+/// @param SoundPlayer The SoundPlayer object.
+/// @param int Unused parameter.
+void soundplayer_decrease_volume(SoundPlayer *, int);
+
+
 #endif

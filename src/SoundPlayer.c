@@ -6,8 +6,10 @@
 #include "sciTinyTimber.h"
 #include <stdlib.h>
 #include <math.h>
+#include <stdio.h>
 
 extern MusicPlayer musicPlayer;
+extern Serial sci0;
 
 void soundplayer_set_playing(SoundPlayer *self, int value) {
   if (!value) {
@@ -24,11 +26,25 @@ void soundplayer_set_period(SoundPlayer *self, int value) {
 }
 
 void soundplayer_set_volume(SoundPlayer *self, int value) {
+  if (value < 0) {
+    value = 0;
+  } else if (value > 20) {
+    value = 20;
+  }
+
   self->volume = value;
+
+  // Maximum characters are three, since volume can be between 0 and 20, and also null terminator.
+  char strBuffer[3];
+  sprintf(strBuffer, "%d", value);
+
+  SCI_WRITECHAR(&sci0, '\n');
+  SCI_WRITE(&sci0, "Volume set: ");
+  SCI_WRITE(&sci0, strBuffer);
+  SCI_WRITECHAR(&sci0, '\n');
 }
 
 
-/* Plays the tone */
 void soundplayer_play_tone(SoundPlayer *self, int play) {
   if(!(self->playing)){
     ABORT(self->play_tone_msg);
@@ -46,4 +62,14 @@ void soundplayer_play_tone(SoundPlayer *self, int play) {
   }
 
   self->play_tone_msg = SEND(USEC(self->current_period), MSEC(50), self, soundplayer_play_tone, !play);
+}
+
+void soundplayer_increase_volume(SoundPlayer *self, int unused) {
+  int new_volume = self->volume + 1;
+  soundplayer_set_volume(self, new_volume);
+}
+
+void soundplayer_decrease_volume(SoundPlayer *self, int unused) {
+  int new_volume = self->volume - 1;
+  soundplayer_set_volume(self, new_volume);
 }
