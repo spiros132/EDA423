@@ -9,7 +9,7 @@
 #define GROUP_13 2
 
 
-/// @brief The database struct is used to save all the data about heartbeats, conductor claims, conductor messages and other CAN messages.
+/// @brief The database struct is used to save all the data that needs to be shared between objects.
 typedef struct {
   Object super;
 
