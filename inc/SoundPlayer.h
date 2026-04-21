@@ -28,13 +28,13 @@ typedef struct {
 { \
   initObject(), \
   /* Playing */ \
-  0, \
+  false, \
   /* Current Period */ \
   0, \
   /* Volume */ \
   5, \
   /* Muted */ \
-  0, \
+  false, \
   /* play_tone_msg */ \
   NULL \
 }
