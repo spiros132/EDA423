@@ -74,8 +74,13 @@ void receive_can_message(CANMsg* msg) {
       int tempo = get_buffer_value_slice(msg->buff, 1, 2);
       int key = msg->buff[3];
 
-      if(tempo == -1 || key == -1) {
-        SCI_WRITE(&sci0, "ERROR | Fault when trying to parse the tempo / key from conductor send state message.\n");
+      if(tempo == -1) {
+        SCI_WRITE(&sci0, "ERROR | Fault when trying to parse the tempo from conductor send state message.\n");
+        return;
+      }
+
+      if (key == -1) {
+        SCI_WRITE(&sci0, "ERROR | Fault when trying to parse the key from conductor send state message.\n");
         return;
       }
 
@@ -125,10 +130,34 @@ void receive_can_message(CANMsg* msg) {
       return;
     }
 
+    #if LOG_LEVEL >= 2
+    SCI_WRITECHAR(&sci0, '\n');
+    SCI_WRITE(&sci0, "INFO | Received conductor message with type: ");
+    char strBuffer[10];
+    sprintf(strBuffer, "%d", type);
+    SCI_WRITE(&sci0, strBuffer);
+    SCI_WRITE(&sci0, " and value: ");
+    sprintf(strBuffer, "%d", buff_value);
+    SCI_WRITE(&sci0, strBuffer);
+    SCI_WRITECHAR(&sci0, '\n');
+    #endif
+
     switch (type) {
       case TYPE_NOTE_TO_PLAY:
         // Check are we supposed to be playing this note?
         int buff_note = get_buffer_value_slice(msg->buff, 0, 3);
+
+        int should_we_not = (buff_note + 2) % 3;
+
+        if (should_we_not == 0) {
+          SCI_WRITE(&sci0, "Not playing note: ");
+          char strBuffer[10];
+          sprintf(strBuffer, "%d", buff_note);
+          SCI_WRITE(&sci0, strBuffer);
+          SCI_WRITECHAR(&sci0, '\n');
+          break;
+        }
+
         ASYNC(&musicPlayer, play_note, buff_note);
 
         SCI_WRITE(&sci0, "Playing note\n");
@@ -140,7 +169,7 @@ void receive_can_message(CANMsg* msg) {
 
         break;
       case TYPE_PLAY:
-        ASYNC(&musicPlayer, play_note, 0);
+        ASYNC(&musicPlayer, play_music, 0);
         break;
       case TYPE_STOP:
         ASYNC(&musicPlayer, stop_music, 0);
@@ -170,41 +199,37 @@ void receive_can_message(CANMsg* msg) {
     SCI_WRITE(&sci0, strBuffer);
     SCI_WRITECHAR(&sci0, '\n');
   }
-
 }
 
-void send_can_message(unsigned char priority, unsigned char type, unsigned char buff[7]) {
+void send_can_message(unsigned char msgId, unsigned char buffer[8]) {
   CANMsg msg;
 
   msg.nodeId = 2;
-  msg.msgId = priority;
-  msg.buff[0] = type;
+  msg.msgId = msgId;
 
-  // Copy over the buffer
-  for(int i = 0; i < 7; i++) {
-    msg.buff[i+1] = (unsigned char)buff[i];
+  for (int i = 0; i < 8; i++) {
+    msg.buff[i] = buffer[i];
   }
+
+  msg.length = 8;
 
   CAN_SEND(&can0, &msg);
 
-
   #if LOG_LEVEL >= 3
   SCI_WRITECHAR(&sci0, '\n');
-  SCI_WRITE(&sci0, "Sent CAN message with priority: ");
+  SCI_WRITE(&sci0, "SPAM | Sent CAN message with priority: ");
   char strBuffer[4];
-  sprintf(strBuffer, "%d", priority);
+  sprintf(strBuffer, "%d", msgId);
   SCI_WRITE(&sci0, strBuffer);
   SCI_WRITE(&sci0, " and type: ");
-  sprintf(strBuffer, "%d", type);
+  sprintf(strBuffer, "%d", buffer[0]);
   SCI_WRITE(&sci0, strBuffer);
   SCI_WRITECHAR(&sci0, '\n');
   #endif
 }
 
-void send_can_message_int(unsigned char priority, unsigned char type, int value) {
-  send_can_message(priority, type, (unsigned char*)value);
-}
-
 void send_can_message_null(unsigned char priority, unsigned char type) {
-  send_can_message(priority, type, NULL);
+  unsigned char buffer[8] = {0};
+  buffer[0] = type;
+  send_can_message(priority, buffer);
 }
