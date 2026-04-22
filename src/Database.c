@@ -99,14 +99,44 @@ int get_current_group_playing(Database *self, int unused) {
 
 void check_heartbeat_7(Database *self, int last_heartbeat_time) {
   update_heartbeat_off(self, GROUP_7);
+
+  // No heartbeat from the conductor
+  if(self->current_conductor == GROUP_7) {
+    if (self->heartbeats[GROUP_8] == 1) {
+      self->current_conductor = GROUP_8;
+
+      #if LOG_LEVEL >= 1
+      SCI_WRITE(&sci0, "\nNo heartbeat from conductor, switching to new conductor: 8\n");
+      #endif
+
+    } else if (self->heartbeats[GROUP_13] == 1) {
+      self->current_conductor = GROUP_13;
+
+      #if LOG_LEVEL >= 1
+      SCI_WRITE(&sci0, "\nNo heartbeat from conductor, switching to new conductor: 13\n");
+      #endif
+    }
+  }
 }
 
 void check_heartbeat_8(Database *self, int last_heartbeat_time) {
   update_heartbeat_off(self, GROUP_8);
+
+  if (self->heartbeats[GROUP_13] == 1) {
+    self->current_conductor = GROUP_13;
+
+    #if LOG_LEVEL >= 1
+    SCI_WRITE(&sci0, "\nNo heartbeat from conductor, switching to new conductor: 13\n");
+    #endif
+  }
 }
 
 void check_heartbeat_13(Database *self, int last_heartbeat_time) {
   update_heartbeat_off(self, GROUP_13);
+
+  if (self->heartbeats[GROUP_13] == 1) {
+    SCI_WRITE(&sci0, "\nWe shouldn't be able to get here.\n");
+  }
 }
 
 void check_conductor_claim(Database *self, int unused) {
