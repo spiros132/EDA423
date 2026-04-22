@@ -1,12 +1,6 @@
 #ifndef _CONDUCTOR_H
 #define _CONDUCTOR_H
 
-#include "canTinyTimber.h"
-
-/// @brief This function should only be called if we are in conductor mode.
-/// @param msg The CAN message received.
-void conductor_receive_can_message(CANMsg* msg);
-
 
 /// @brief Send a CAN message to the musicians with the note for the next one to play.
 /// @param note The index of the note to play.
