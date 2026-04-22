@@ -14,16 +14,17 @@ extern Serial sci0;
 
 
 void conductor_send_state(int tempo, int key) {
-  unsigned char buff[7];
+  unsigned char buff[8] = {0};
 
   // Two bytes for the tempo.
-  buff[0] = (tempo >> 1 * sizeof(unsigned char)) & 0xFF;
-  buff[1] = (tempo >> 0 * sizeof(unsigned char)) & 0xFF;
+  buff[0] = TYPE_CONDUCTOR_SEND_STATE;
+  buff[1] = (tempo >> 1 * sizeof(unsigned char)) & 0xFF;
+  buff[2] = (tempo >> 0 * sizeof(unsigned char)) & 0xFF;
 
   // One byte for the key.
-  buff[2] = key & 0xFF;
+  buff[3] = key & 0xFF;
 
-  send_can_message(PRIORITY_HEARTBEAT, TYPE_CONDUCTOR_SEND_STATE, buff);
+  send_can_message(PRIORITY_HEARTBEAT, buff);
 
   #if LOG_LEVEL >= 2
   char strBuff[10];
@@ -41,15 +42,16 @@ void conductor_send_state(int tempo, int key) {
 }
 
 void conductor_send_note_to_play(int note) {
-  unsigned char buff[7];
+  unsigned char buff[8] = {0};
 
-  // Four bytes for the note.
-  buff[0] = (note >> 3 * sizeof(unsigned char)) & 0xFF;
-  buff[1] = (note >> 2 * sizeof(unsigned char)) & 0xFF;
-  buff[2] = (note >> 1 * sizeof(unsigned char)) & 0xFF;
-  buff[3] = (note >> 0 * sizeof(unsigned char)) & 0xFF;
+  buff[0] = TYPE_NOTE_TO_PLAY;
+  // Four bytes for the note. Big endian order.
+  buff[1] = (note >> 3 * sizeof(unsigned char)) & 0xFF;
+  buff[2] = (note >> 2 * sizeof(unsigned char)) & 0xFF;
+  buff[3] = (note >> 1 * sizeof(unsigned char)) & 0xFF;
+  buff[4] = (note >> 0 * sizeof(unsigned char)) & 0xFF;
 
-  send_can_message(PRIORITY_CONDUCTOR, TYPE_NOTE_TO_PLAY, buff);
+  send_can_message(PRIORITY_CONDUCTOR, buff);
 
   #if LOG_LEVEL >= 2
   char strBuff[10];
@@ -85,25 +87,37 @@ void conductor_send_stop() {
 }
 
 void conductor_send_tempo(int tempo) {
-  send_can_message_int(PRIORITY_CONDUCTOR, TYPE_SET_TEMPO, tempo);
+  unsigned char buff[8] = {0};
+  buff[0] = TYPE_SET_TEMPO;
+
+  // Two bytes for the tempo.
+  buff[1] = (tempo >> 1 * sizeof(unsigned char)) & 0xFF;
+  buff[2] = (tempo >> 0 * sizeof(unsigned char)) & 0xFF;
+
+  send_can_message(PRIORITY_CONDUCTOR, buff);
 
   #if LOG_LEVEL >= 2
-  char buff[10];
-  sprintf(buff, "%d", tempo);
+  char strBuff[10];
+  sprintf(strBuff, "%d", tempo);
   SCI_WRITE(&sci0, "\nSent tempo: ");
-  SCI_WRITE(&sci0, buff);
+  SCI_WRITE(&sci0, strBuff);
   SCI_WRITECHAR(&sci0, '\n');
   #endif
 }
 
 void conductor_send_key(int key) {
-  send_can_message_int(PRIORITY_CONDUCTOR, TYPE_SET_KEY, key);
+  unsigned char buff[8] = {0};
+  buff[0] = TYPE_SET_KEY;
+  buff[1] = (key >> 8 * sizeof(unsigned char)) & 0xFF;
+  buff[2] = (key >> 0 * sizeof(unsigned char)) & 0xFF;
+
+  send_can_message(PRIORITY_CONDUCTOR, buff);
 
   #if LOG_LEVEL >= 2
-  char buff[10];
-  sprintf(buff, "%d", key);
+  char strBuff[10];
+  sprintf(strBuff, "%d", key);
   SCI_WRITE(&sci0, "\nSent key: ");
-  SCI_WRITE(&sci0, buff);
+  SCI_WRITE(&sci0, strBuff);
   SCI_WRITECHAR(&sci0, '\n');
   #endif
 }
