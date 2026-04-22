@@ -8,32 +8,102 @@
 #include <stdio.h>
 #include <math.h>
 
+#if LOG_LEVEL >= 1
+extern Serial sci0;
+#endif
 
-void conductor_receive_can_message(CANMsg* msg) {
 
+void conductor_send_state(int tempo, int key) {
+  unsigned char buff[7];
+
+  // Two bytes for the tempo.
+  buff[0] = (tempo >> 1 * sizeof(unsigned char)) & 0xFF;
+  buff[1] = (tempo >> 0 * sizeof(unsigned char)) & 0xFF;
+
+  // One byte for the key.
+  buff[2] = key & 0xFF;
+
+  send_can_message(PRIORITY_HEARTBEAT, TYPE_CONDUCTOR_SEND_STATE, buff);
+
+  #if LOG_LEVEL >= 2
+  char strBuff[10];
+
+  sprintf(strBuff, "%d", tempo);
+  SCI_WRITE(&sci0, "\nSent tempo: ");
+  SCI_WRITE(&sci0, strBuff);
+  SCI_WRITECHAR(&sci0, '\n');
+
+  sprintf(strBuff, "%d", key);
+  SCI_WRITE(&sci0, "\nSent key: ");
+  SCI_WRITE(&sci0, strBuff);
+  SCI_WRITECHAR(&sci0, '\n');
+  #endif
 }
 
-
 void conductor_send_note_to_play(int note) {
+  unsigned char buff[7];
 
+  // Four bytes for the note.
+  buff[0] = (note >> 3 * sizeof(unsigned char)) & 0xFF;
+  buff[1] = (note >> 2 * sizeof(unsigned char)) & 0xFF;
+  buff[2] = (note >> 1 * sizeof(unsigned char)) & 0xFF;
+  buff[3] = (note >> 0 * sizeof(unsigned char)) & 0xFF;
+
+  send_can_message(PRIORITY_CONDUCTOR, TYPE_NOTE_TO_PLAY, buff);
+
+  #if LOG_LEVEL >= 2
+  char strBuff[10];
+  sprintf(strBuff, "%d", note);
+  SCI_WRITE(&sci0, "\nSent note: ");
+  SCI_WRITE(&sci0, strBuff);
+  SCI_WRITECHAR(&sci0, '\n');
+  #endif
 }
 
 void conductor_send_reset() {
+  send_can_message_null(PRIORITY_CONDUCTOR, TYPE_RESET);
 
+  #if LOG_LEVEL >= 2
+  SCI_WRITE(&sci0, "\nSent reset message.\n");
+  #endif
 }
 
 void conductor_send_play() {
+  send_can_message_null(PRIORITY_CONDUCTOR, TYPE_PLAY);
 
+  #if LOG_LEVEL >= 2
+  SCI_WRITE(&sci0, "\nSent play message.\n");
+  #endif
 }
 
 void conductor_send_stop() {
+  send_can_message_null(PRIORITY_CONDUCTOR, TYPE_STOP);
 
+  #if LOG_LEVEL >= 2
+  SCI_WRITE(&sci0, "\nSent stop message.\n");
+  #endif
 }
 
 void conductor_send_tempo(int tempo) {
+  send_can_message_int(PRIORITY_CONDUCTOR, TYPE_SET_TEMPO, tempo);
 
+  #if LOG_LEVEL >= 2
+  char buff[10];
+  sprintf(buff, "%d", tempo);
+  SCI_WRITE(&sci0, "\nSent tempo: ");
+  SCI_WRITE(&sci0, buff);
+  SCI_WRITECHAR(&sci0, '\n');
+  #endif
 }
 
 void conductor_send_key(int key) {
+  send_can_message_int(PRIORITY_CONDUCTOR, TYPE_SET_KEY, key);
 
+  #if LOG_LEVEL >= 2
+  char buff[10];
+  sprintf(buff, "%d", key);
+  SCI_WRITE(&sci0, "\nSent key: ");
+  SCI_WRITE(&sci0, buff);
+  SCI_WRITECHAR(&sci0, '\n');
+  #endif
 }
