@@ -14,6 +14,8 @@
 extern App app;
 extern MusicPlayer musicPlayer;
 extern SoundPlayer soundPlayer;
+extern Database database;
+
 extern Can can0;
 extern Serial sci0;
 
@@ -147,19 +149,9 @@ void reader(App *self, int c) {
     if (self->mode == CONDUCTOR_MODE) {
       int key = self->history[0];
 
-      ASYNC(&musicPlayer, set_key, key);
+      //ASYNC(&musicPlayer, set_key, key);
 
-      send_can_message_int(PRIORITY_CONDUCTOR, TYPE_SET_KEY, key);
-
-      #if LOG_LEVEL >= 1
-      char strBuffer[10];
-      sprintf(strBuffer, "%d", key);
-
-      SCI_WRITECHAR(&sci0, '\n');
-      SCI_WRITE(&sci0, "Key set: ");
-      SCI_WRITE(&sci0, strBuffer);
-      SCI_WRITECHAR(&sci0, '\n');
-      #endif
+      conductor_send_key(key);
     }
     break;
   case KEY_SET_TEMPO:
@@ -169,17 +161,6 @@ void reader(App *self, int c) {
       int tempo = self->history[0];
 
       conductor_send_tempo(tempo);
-
-
-      #if LOG_LEVEL >= 1
-      char strBuffer[10];
-      sprintf(strBuffer, "%d", tempo);
-
-      SCI_WRITECHAR(&sci0, '\n');
-      SCI_WRITE(&sci0, "Tempo set: ");
-      SCI_WRITE(&sci0, strBuffer);
-      SCI_WRITECHAR(&sci0, '\n');
-      #endif
     }
     break;
   case KEY_MUSIC_STOP:
@@ -236,6 +217,12 @@ void startApp(App *self, int arg) {
   SCI_WRITE(&sci0, "Enter integer: \n");
 
   heartbeat_tick(self, 0);
+
+  // Check for other conductors.
+  int current_time = CURRENT_OFFSET();
+
+  SEND(MSEC(200), MAX_LAG_DEADLINE, &database, check_heartbeat_7, current_time);
+  SEND(MSEC(200), MAX_LAG_DEADLINE, &database, check_heartbeat_8, current_time);
 }
 
 int main() {
