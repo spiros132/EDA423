@@ -36,7 +36,7 @@ void receive_can_message(CANMsg* msg);
 /// @brief Send a CAN message with the given message ID and buffer.
 /// @param msgId The message ID of the CAN message.
 /// @param buff The buffer of the CAN message. Can be max 7 bytes long.
-void send_can_message(unsigned char priority, unsigned char type, char buff[7]);
+void send_can_message(unsigned char priority, unsigned char type, unsigned char buff[7]);
 
 /// @brief Send a CAN message with the given message ID and an integer value as the buffer.
 /// @param msgId The message ID of the CAN message.

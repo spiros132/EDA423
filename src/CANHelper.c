@@ -52,7 +52,7 @@ int get_buffer_value_slice(unsigned char buffer[8], int start, int offset) {
 
   int value = buffer[start];
   for (int i = 1; i <= offset; i++) {
-    value = (value << 8) | buffer[start + i];
+    value = (value << sizeof(unsigned char)) | buffer[start + i];
   }
 
   return value;
@@ -67,21 +67,25 @@ void receive_can_message(CANMsg* msg) {
     int group = msg->nodeId;
 
     if (type == TYPE_HEARTBEAT) {
-      SYNC(&database, update_heartbeat, group);
-      SYNC(&database, update_last_heartbeat, group);
+      ASYNC(&database, update_heartbeat_on, group);
+      ASYNC(&database, update_last_heartbeat, group);
     } else if(type == TYPE_CONDUCTOR_SEND_STATE) {
       // First two bytes are the tempo, the third byte is the key.
-      int uchar_size = sizeof(unsigned char);
-      int tempo = (msg->buff[1] << uchar_size) | msg->buff[2];
+      int tempo = get_buffer_value_slice(msg->buff, 1, 2);
       int key = msg->buff[3];
 
-      SYNC(&musicPlayer, set_tempo, tempo);
-      SYNC(&musicPlayer, set_key, key);
+      if(tempo == -1 || key == -1) {
+        SCI_WRITE(&sci0, "ERROR | Fault when trying to parse the tempo / key from conductor send state message.\n");
+        return;
+      }
+
+      ASYNC(&musicPlayer, set_tempo, tempo);
+      ASYNC(&musicPlayer, set_key, key);
     } else {
       SCI_WRITE(&sci0, "ERROR | CONDUCTOR SEND STATE | Received type: ");
 
       // Char can only be maximum three characters long + null terminator.
-      char strBuffer[10];
+      char strBuffer[4];
       sprintf(strBuffer, "%d", msg->buff[0]);
       SCI_WRITE(&sci0, strBuffer);
       SCI_WRITECHAR(&sci0, '\n');
@@ -106,17 +110,37 @@ void receive_can_message(CANMsg* msg) {
     int type = get_type(msg->buff);
     int buff_value = get_buffer_value_int(msg->buff);
 
+    int current_conductor = SYNC(&database, get_current_conductor, 0);
+
+    if(current_conductor != msg->nodeId) {
+      #if LOG_LEVEL >= 1
+      SCI_WRITECHAR(&sci0, '\n');
+      SCI_WRITE(&sci0, "ERROR | Received conductor message from wrong conductor, node: ");
+      char strBuffer[4];
+      sprintf(strBuffer, "%d", msg->nodeId);
+      SCI_WRITE(&sci0, strBuffer);
+      SCI_WRITECHAR(&sci0, '\n');
+      #endif
+
+      return;
+    }
+
     switch (type) {
       case TYPE_NOTE_TO_PLAY:
         // Check are we supposed to be playing this note?
         int buff_note = get_buffer_value_slice(msg->buff, 0, 3);
-        ASYNC(&musicPlayer, play_note, buff_value);
+        ASYNC(&musicPlayer, play_note, buff_note);
+
+        SCI_WRITE(&sci0, "Playing note\n");
+        SCI_WRITECHAR(&sci0, buff_note);
         break;
       case TYPE_RESET:
-        ASYNC(&musicPlayer, stop_music, 0);
+        ASYNC(&musicPlayer, set_tempo, 120);
+        ASYNC(&musicPlayer, set_key, 0);
+
         break;
       case TYPE_PLAY:
-        ASYNC(&musicPlayer, toggle_music, 0);
+        ASYNC(&musicPlayer, play_note, 0);
         break;
       case TYPE_STOP:
         ASYNC(&musicPlayer, stop_music, 0);
@@ -149,7 +173,7 @@ void receive_can_message(CANMsg* msg) {
 
 }
 
-void send_can_message(unsigned char priority, unsigned char type, char buff[7]) {
+void send_can_message(unsigned char priority, unsigned char type, unsigned char buff[7]) {
   CANMsg msg;
 
   msg.nodeId = 2;
@@ -158,25 +182,29 @@ void send_can_message(unsigned char priority, unsigned char type, char buff[7]) 
 
   // Copy over the buffer
   for(int i = 0; i < 7; i++) {
-    // Check for null terminator;
     msg.buff[i+1] = (unsigned char)buff[i];
-
-    if (buff[i] == 0) {
-      msg.length = i+1;
-      break;
-    }
   }
 
   CAN_SEND(&can0, &msg);
+
+
+  #if LOG_LEVEL >= 3
+  SCI_WRITECHAR(&sci0, '\n');
+  SCI_WRITE(&sci0, "Sent CAN message with priority: ");
+  char strBuffer[4];
+  sprintf(strBuffer, "%d", priority);
+  SCI_WRITE(&sci0, strBuffer);
+  SCI_WRITE(&sci0, " and type: ");
+  sprintf(strBuffer, "%d", type);
+  SCI_WRITE(&sci0, strBuffer);
+  SCI_WRITECHAR(&sci0, '\n');
+  #endif
 }
 
 void send_can_message_int(unsigned char priority, unsigned char type, int value) {
-  char buffer[7];
-  itoa(value, buffer, 10);
-  send_can_message(priority, type, buffer);
+  send_can_message(priority, type, (unsigned char*)value);
 }
 
 void send_can_message_null(unsigned char priority, unsigned char type) {
-  char buffer[8] = {0};
-  send_can_message(priority, type, buffer);
+  send_can_message(priority, type, NULL);
 }
