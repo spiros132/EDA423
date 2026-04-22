@@ -98,7 +98,7 @@
 
 /* Debug Definitions */
 
-/// @brief The log level for the project. 0 means no logs, 1 means only important logs, 2 means all logs.
+/// @brief The log level for the project. 0 means no logs, 1 means only important logs, 2 means all logs, 3 means all logs plus some spam logs.
 #define LOG_LEVEL 2
 
 #endif
