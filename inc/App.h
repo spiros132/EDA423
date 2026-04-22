@@ -12,9 +12,6 @@
 typedef struct {
   Object super;
 
-  //Part 0
-
-  // Step 0
   char buffer[BUFFERLENGTH];
   int bufferLength;
   int history[3];
@@ -22,6 +19,8 @@ typedef struct {
 
   /// @brief The mode of the board. Can be either conductor or musician mode.
   int mode;
+
+  Msg debug_msg;
 } App;
 
 
@@ -37,7 +36,9 @@ typedef struct {
   /* History Length */ \
   0, \
   /* Operation Mode */ \
-  CONDUCTOR_MODE \
+  CONDUCTOR_MODE, \
+  /* Debug Msg */ \
+  NULL \
 }
 
 
@@ -60,5 +61,11 @@ void clear_input(App *, int);
 /// @param App The app object.
 /// @param int Unused parameter.
 void heartbeat_tick(App *, int);
+
+/// @brief Prints out the debug information about the current tempo.
+/// @param App The app object.
+/// @param int Unused parameter.
+void print_debug_info(App *, int);
+
 
 #endif

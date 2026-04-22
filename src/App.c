@@ -4,9 +4,9 @@
 #include "canTinyTimber.h"
 #include "sciTinyTimber.h"
 #include "CANHelper.h"
-#include "Musician.h"
 #include "Conductor.h"
 #include "Definitions.h"
+#include "Database.h"
 #include <stdlib.h>
 #include <math.h>
 #include <stdio.h>
@@ -44,6 +44,30 @@ void heartbeat_tick(App *self, int unused) {
   SEND(MSEC(200), MAX_LAG_DEADLINE, self, heartbeat_tick, 0);
 }
 
+void print_debug_info(App *self, int unused) {
+  if(self->mode == CONDUCTOR_MODE) {
+    int tempo = SYNC(&musicPlayer, get_tempo, 0);
+
+    char strBuffer[4];
+    sprintf(strBuffer, "%d", tempo);
+
+    SCI_WRITECHAR(&sci0, '\n');
+    SCI_WRITE(&sci0, "Current tempo: ");
+    SCI_WRITE(&sci0, strBuffer);
+    SCI_WRITECHAR(&sci0, '\n');
+  } else if(self->mode == MUSICIAN_MODE) {
+    // Get if the board is muted or not.
+    int muted = SYNC(&soundPlayer, soundplayer_get_muted, 0);
+    if (muted)  {
+      SCI_WRITE(&sci0, "MUTED\n");
+    }
+  } else {
+    SCI_WRITE(&sci0, "Unknown mode in print_debug_info.\n");
+  }
+
+  self->debug_msg = SEND(PRINT_DEBUG_INFO_PERIOD, MAX_LAG_DEADLINE, self, print_debug_info, 0);
+}
+
 void clear_input(App *self, int unused) {
   self->bufferLength = 0;
 }
@@ -52,18 +76,7 @@ void receiver(App *self, int unused) {
   CANMsg msg;
   CAN_RECEIVE(&can0, &msg);
 
-  if(self->mode == MUSICIAN_MODE) {
-    musician_receive_can_message(&msg);
-  } else if (self->mode == CONDUCTOR_MODE) {
-    conductor_receive_can_message(&msg);
-  } else {
-    SCI_WRITE(&sci0, "Mode is invalid in receiver: ");
-
-    char strBuffer[10];
-    sprintf(strBuffer, "%d", self->mode);
-    SCI_WRITE(&sci0, strBuffer);
-    SCI_WRITECHAR(&sci0, '\n');
-  }
+  receive_can_message(&msg);
 }
 
 void reader(App *self, int c) {
@@ -106,6 +119,7 @@ void reader(App *self, int c) {
     self->history[0] = 0;
     self->history[1] = 0;
     self->history[2] = 0;
+
     SCI_WRITE(&sci0, "The 3-history has been erased.\n");
     break;
   case KEY_VOLUME_INC:
@@ -137,12 +151,15 @@ void reader(App *self, int c) {
 
       send_can_message_int(PRIORITY_CONDUCTOR, TYPE_SET_KEY, key);
 
-      itoa(key, strBuffer, 10);
+      #if LOG_LEVEL >= 1
+      char strBuffer[10];
+      sprintf(strBuffer, "%d", key);
 
       SCI_WRITECHAR(&sci0, '\n');
       SCI_WRITE(&sci0, "Key set: ");
       SCI_WRITE(&sci0, strBuffer);
       SCI_WRITECHAR(&sci0, '\n');
+      #endif
     }
     break;
   case KEY_SET_TEMPO:
@@ -153,13 +170,16 @@ void reader(App *self, int c) {
 
       conductor_send_tempo(tempo);
 
-      // Debug
-      itoa(tempo, strBuffer, 10);
+
+      #if LOG_LEVEL >= 1
+      char strBuffer[10];
+      sprintf(strBuffer, "%d", tempo);
 
       SCI_WRITECHAR(&sci0, '\n');
       SCI_WRITE(&sci0, "Tempo set: ");
       SCI_WRITE(&sci0, strBuffer);
       SCI_WRITECHAR(&sci0, '\n');
+      #endif
     }
     break;
   case KEY_MUSIC_STOP:
@@ -171,6 +191,21 @@ void reader(App *self, int c) {
   case KEY_MUSIC_PLAY_2:
     if (self->mode == CONDUCTOR_MODE) {
       conductor_send_play();
+    }
+    break;
+  case KEY_TOGGLE_DEBUG_PRINTING:
+    if (self->debug_msg != NULL) {
+      ABORT(self->debug_msg);
+      self->debug_msg = NULL;
+      SCI_WRITE(&sci0, "Debug printing disabled.\n");
+    } else {
+      self->debug_msg = SEND(PRINT_DEBUG_INFO_PERIOD, MAX_LAG_DEADLINE, self, print_debug_info, 0);
+      SCI_WRITE(&sci0, "Debug printing enabled.\n");
+    }
+    break;
+  case KEY_CONDUCTOR_RESET:
+    if (self->mode == CONDUCTOR_MODE) {
+      conductor_send_reset();
     }
     break;
   case '-':
