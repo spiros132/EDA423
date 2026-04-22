@@ -187,6 +187,15 @@ void reader(App *self, int c) {
       conductor_send_reset();
     }
     break;
+  case KEY_FAILURE_1:
+
+    break;
+  case KEY_FAILURE_2:
+
+    break;
+  case KEY_FAILURE_3:
+
+    break;
   case '-':
     if (self->bufferLength != 0)
       return;

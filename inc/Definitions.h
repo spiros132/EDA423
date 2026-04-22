@@ -96,7 +96,16 @@
 /// @brief The key for resetting the conductors values, both tempo and key.
 #define KEY_CONDUCTOR_RESET 'r'
 
+/// @brief The key for conductorship claim.
 #define KEY_CLAIM_CONDUCTORSHIP 'y'
+
+
+/* Failure Definitions */
+
+#define KEY_FAILURE_1 'j'
+#define KEY_FAILURE_2 'k'
+#define KEY_FAILURE_3 'l'
+
 
 /* Debug Definitions */
 
