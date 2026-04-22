@@ -96,6 +96,8 @@
 /// @brief The key for resetting the conductors values, both tempo and key.
 #define KEY_CONDUCTOR_RESET 'r'
 
+#define KEY_CLAIM_CONDUCTORSHIP 'y'
+
 /* Debug Definitions */
 
 /// @brief The log level for the project. 0 means no logs, 1 means only important logs, 2 means all logs, 3 means all logs plus some spam logs.
