@@ -3,7 +3,9 @@
 #include "Definitions.h"
 #include "sciTinyTimber.h"
 #include "stdio.h"
+#include "App.h"
 
+extern App app;
 extern Serial sci0;
 
 void update_heartbeat_on(Database *self, int group) {
@@ -156,6 +158,18 @@ void check_conductor_claim(Database *self, int unused) {
       SCI_WRITE(&sci0, strBuffer);
       SCI_WRITECHAR(&sci0, '\n');
       #endif
+
+      int mode = SYNC(&app, get_mode, 0);
+
+      if (i == GROUP_13) {
+        SYNC(&app, set_mode, CONDUCTOR_MODE);
+
+        SCI_WRITE(&sci0, "\nClaimed Conductorship\n");
+      } else if(mode == CONDUCTOR_MODE) {
+        SYNC(&app, set_mode, MUSICIAN_MODE);
+
+        SCI_WRITE(&sci0, "\nConductorship Void\n");
+      }
 
       return;
     }
