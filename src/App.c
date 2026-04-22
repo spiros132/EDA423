@@ -24,6 +24,14 @@ int x(int k) {
   return k - (-10);
 }
 
+int get_mode(App *self, int unused) {
+  return self->mode;
+}
+
+void set_mode(App *self, int mode) {
+  self->mode = mode;
+}
+
 void finish_input(App *self, int unused) {
   self->buffer[self->bufferLength] = '\0';
 
@@ -82,17 +90,6 @@ void receiver(App *self, int unused) {
 }
 
 void reader(App *self, int c) {
-  if ((char)c == 'y') {
-    if (self->mode == MUSICIAN_MODE) {
-      SCI_WRITE(&sci0, "Switching to conductor mode \n");
-      self->mode = CONDUCTOR_MODE;
-    }
-    else {
-      SCI_WRITE(&sci0, "Switching to musician mode \n");
-      self->mode = MUSICIAN_MODE;
-    }
-  }
-
   /* Switch for all possible inputs.
    * Accepts 0-9, '-', 'q', 'a', 'w', 's', 'e', 'f', 'm'.
    * See README for use cases.
@@ -102,6 +99,9 @@ void reader(App *self, int c) {
 
   switch ((char)c)
   {
+  case KEY_CLAIM_CONDUCTORSHIP:
+    send_can_message_null(PRIORITY_CONDUCTOR_CLAIM, TYPE_CONDUCTOR_CLAIM);
+    break;
   case KEY_SUBMIT:
     SCI_WRITECHAR(&sci0, '\n');
 
@@ -148,8 +148,6 @@ void reader(App *self, int c) {
 
     if (self->mode == CONDUCTOR_MODE) {
       int key = self->history[0];
-
-      //ASYNC(&musicPlayer, set_key, key);
 
       conductor_send_key(key);
     }

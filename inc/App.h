@@ -68,4 +68,15 @@ void heartbeat_tick(App *, int);
 void print_debug_info(App *, int);
 
 
+/// @brief Getter for the mode of the board.
+/// @param App The app object.
+/// @param int The new mode to set for the board.
+void set_mode(App *, int);
+
+/// @brief Getter for the mode of the board.
+/// @param App The app object.
+/// @param int Unused parameter.
+/// @return The mode of the board.
+int get_mode(App *, int);
+
 #endif
