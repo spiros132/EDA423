@@ -2,6 +2,7 @@
 #include "TinyTimber.h"
 #include "canTinyTimber.h"
 #include "sciTinyTimber.h"
+#include "Definitions.h"
 #include <stdlib.h>
 #include <math.h>
 
@@ -35,7 +36,6 @@ int get_index(MusicPlayer *self, int unused)
 }
 
 
-// Setters
 void set_tempo(MusicPlayer *self, int tempo)
 {
   // Clamp the tempo
@@ -138,8 +138,11 @@ void abort_msg(MusicPlayer *self, int unused)
 void play_note(MusicPlayer *self, int index)
 {
   int period = calc_period(self->notes[index] + self->key);
-  ASYNC(&soundPlayer, soundplayer_set_period, period);
   SYNC(&soundPlayer, soundplayer_set_playing, true);
+  ASYNC(&soundPlayer, soundplayer_set_period, period);
+
+  // Schedule the play_tone function to run.
+  BEFORE(MAX_LAG_DEADLINE, &soundPlayer, soundplayer_play_tone, period);
 
   // Get the beat time, convert from beats per minute, to how many milliseconds for one beat.
   // In the beats list we count a half beat as 1x, one beat as 2x and two beats as 4x.
@@ -149,15 +152,13 @@ void play_note(MusicPlayer *self, int index)
   // x = millisekunder/beat
   // 60/bpm = (60/2*minute)/beat * 1000
 
-  // Schedule the play_tone to play almost immediately
-  SEND(MSEC(50), MAX_LAG_DEADLINE, &self->super, soundplayer_play_tone, true);
-
   self->finish_note_msg = SEND(MSEC(mspb), MAX_LAG_DEADLINE, self, stop_note, 0);
 }
 
 void stop_note(MusicPlayer *self, int unused)
 {
   SYNC(&soundPlayer, soundplayer_set_playing, false);
+  SCI_WRITE(&sci0, "Finished playing note\n");
 }
 
 void next_note(MusicPlayer *self, int unused)
@@ -173,7 +174,7 @@ void next_note(MusicPlayer *self, int unused)
   /* Activate the musicPlayer */
   SYNC(&soundPlayer, soundplayer_set_playing, true);
   /* Play the tone */
-  ASYNC(&soundPlayer, soundplayer_play_tone, true);
+  BEFORE(MAX_LAG_DEADLINE, &soundPlayer, soundplayer_play_tone, 100);
 
   // Get the beat time, convert from beats per minute, to how many milliseconds for one beat.
   // In the beats list we count a half beat as 1x, one beat as 2x and two beats as 4x.
@@ -182,9 +183,6 @@ void next_note(MusicPlayer *self, int unused)
   // bpm = beats/minute
   // x = millisekunder/beat
   // 60/bpm = (60/2*minute)/beat * 1000
-
-  // Schedule the play_tone to play almost immediately
-  SEND(MSEC(50), MAX_LAG_DEADLINE, &soundPlayer, soundplayer_play_tone, true);
 
   // Schedule the finish_note function
   self->finish_note_msg = SEND(MSEC(mspb), MAX_LAG_DEADLINE, self, finish_note, 0);
