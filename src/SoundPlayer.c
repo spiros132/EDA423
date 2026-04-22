@@ -45,14 +45,12 @@ void soundplayer_play_tone(SoundPlayer *self, int play) {
     #if LOG_LEVEL >= 2
     SCI_WRITE(&sci0, "Play Tone - Playing tone\n");
     #endif
-
   } else {
     DAC_REG = 0;
 
     #if LOG_LEVEL >= 2
     SCI_WRITE(&sci0, "Play Tone - Not playing tone\n");
     #endif
-
   }
 
   self->play_tone_msg = SEND(USEC(self->current_period), MSEC(50), self, soundplayer_play_tone, !play);
@@ -105,6 +103,10 @@ void soundplayer_set_volume(SoundPlayer *self, int value) {
 
 void soundplayer_set_muted(SoundPlayer *self, int muted) {
   self->muted = muted;
+}
+
+int soundplayer_get_muted(SoundPlayer *self, int unused) {
+  return self->muted;
 }
 
 

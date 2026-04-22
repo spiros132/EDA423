@@ -65,6 +65,11 @@ void soundplayer_set_volume(SoundPlayer *, int);
 /// @param int A boolean value to set the muted state.
 void soundplayer_set_muted(SoundPlayer *, int);
 
+/// @brief Gets the muted state of the SoundPlayer
+/// @param SoundPlayer The SoundPlayer object
+/// @param int Unused parameter
+/// @return A boolean value indicating if the SoundPlayer is muted or not.
+int soundplayer_get_muted(SoundPlayer *, int);
 
 /// @brief Increases the volume of the sound player by 1.
 /// @param SoundPlayer The SoundPlayer object.
