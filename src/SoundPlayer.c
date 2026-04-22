@@ -17,22 +17,13 @@ extern Serial sci0;
 
 
 void soundplayer_play_tone(SoundPlayer *self, int play) {
-  #if LOG_LEVEL >= 2
-  SCI_WRITE(&sci0, "Play Tone - Playing: ");
-  if (self->playing) {
-    SCI_WRITE(&sci0, "true\n");
-  } else {
-    SCI_WRITE(&sci0, "false\n");
-  }
-  #endif
-
-  if(!self->playing){
+  if(!(self->playing)){
     ABORT(self->play_tone_msg);
     self->play_tone_msg = NULL;
     DAC_REG = 0;
 
     #if LOG_LEVEL >= 2
-    SCI_WRITE(&sci0, "Play Tone - Sound player is not playing, cannot play tone\n");
+    SCI_WRITE(&sci0, "INFO | Sound player is not playing, cannot play tone\n");
     #endif
 
     return;
@@ -42,14 +33,14 @@ void soundplayer_play_tone(SoundPlayer *self, int play) {
   if (play && (muted == 0)) {
     DAC_REG = self->volume;
 
-    #if LOG_LEVEL >= 2
-    SCI_WRITE(&sci0, "Play Tone - Playing tone\n");
+    #if LOG_LEVEL >= 3
+    SCI_WRITE(&sci0, "INFO | Playing tone\n");
     #endif
   } else {
     DAC_REG = 0;
 
-    #if LOG_LEVEL >= 2
-    SCI_WRITE(&sci0, "Play Tone - Not playing tone\n");
+    #if LOG_LEVEL >= 3
+    SCI_WRITE(&sci0, "INFO | Not playing tone\n");
     #endif
   }
 
@@ -67,7 +58,7 @@ void soundplayer_set_playing(SoundPlayer *self, int value) {
   self->playing = value;
 
   #if LOG_LEVEL >= 2
-  SCI_WRITE(&sci0, "Sound player set playing: ");
+  SCI_WRITE(&sci0, "INFO | Sound player set playing: ");
   if (value) {
     SCI_WRITE(&sci0, "true\n");
   } else {
@@ -78,6 +69,17 @@ void soundplayer_set_playing(SoundPlayer *self, int value) {
 
 void soundplayer_set_period(SoundPlayer *self, int value) {
   self->current_period = value;
+
+  #if LOG_LEVEL >= 3
+  // Maximum characters are three, since volume can be between 0 and 20, and also null terminator.
+  char strBuffer[3];
+  sprintf(strBuffer, "%d", value);
+
+  SCI_WRITECHAR(&sci0, '\n');
+  SCI_WRITE(&sci0, "INFO | Period set: ");
+  SCI_WRITE(&sci0, strBuffer);
+  SCI_WRITECHAR(&sci0, '\n');
+  #endif
 }
 
 void soundplayer_set_volume(SoundPlayer *self, int value) {
@@ -95,7 +97,7 @@ void soundplayer_set_volume(SoundPlayer *self, int value) {
   sprintf(strBuffer, "%d", value);
 
   SCI_WRITECHAR(&sci0, '\n');
-  SCI_WRITE(&sci0, "Volume set: ");
+  SCI_WRITE(&sci0, "INFO | Volume set: ");
   SCI_WRITE(&sci0, strBuffer);
   SCI_WRITECHAR(&sci0, '\n');
   #endif
@@ -115,7 +117,7 @@ void soundplayer_increase_volume(SoundPlayer *self, int unused) {
   soundplayer_set_volume(self, new_volume);
 
   #if LOG_LEVEL >= 2
-  SCI_WRITE(&sci0, "Play Tone - Increased volume\n");
+  SCI_WRITE(&sci0, "INFO | Increased volume\n");
   #endif
 }
 
@@ -124,7 +126,7 @@ void soundplayer_decrease_volume(SoundPlayer *self, int unused) {
   soundplayer_set_volume(self, new_volume);
 
   #if LOG_LEVEL >= 2
-  SCI_WRITE(&sci0, "Decreased volume\n");
+  SCI_WRITE(&sci0, "INFO | Decreased volume\n");
   #endif
 }
 
@@ -133,6 +135,6 @@ void soundplayer_toggle_muted(SoundPlayer *self, int unused) {
   soundplayer_set_muted(self, new_muted);
 
   #if LOG_LEVEL >= 2
-  SCI_WRITE(&sci0, "Toggled mute\n");
+  SCI_WRITE(&sci0, "INFO | Toggled mute\n");
   #endif
 }
