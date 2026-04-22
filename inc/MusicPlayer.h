@@ -6,7 +6,7 @@
 #include <stdbool.h>
 
 #define NOTES_AMOUNT 32
-#define MAX_LAG_DEADLINE MSEC(50)
+
 
 typedef struct {
   Object super;
