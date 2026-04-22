@@ -3,11 +3,15 @@
 #include "canTinyTimber.h"
 #include "sciTinyTimber.h"
 #include "Definitions.h"
+#include "App.h"
+#include "Database.h"
 #include <stdlib.h>
 #include <math.h>
 
-extern Serial sci0;
+extern App app;
 extern SoundPlayer soundPlayer;
+extern Serial sci0;
+extern Database database;
 
 // HELPER FUNCTIONS
 
@@ -168,13 +172,33 @@ void next_note(MusicPlayer *self, int unused)
   // - Set the period on the sound player
   // - Set the current index and do mod on it in case it gets to the end
 
-  int period = calc_period(self->notes[self->index] + self->key);
-  ASYNC(&soundPlayer, soundplayer_set_period, period);
+  // Check if we are just musician or conductor as well.
+  // Check if we are supposed to be playing this.
 
-  /* Activate the musicPlayer */
-  SYNC(&soundPlayer, soundplayer_set_playing, true);
-  /* Play the tone */
-  BEFORE(MAX_LAG_DEADLINE, &soundPlayer, soundplayer_play_tone, 100);
+  int mode = SYNC(&app, get_mode, 0);
+
+
+  int should_we_play = !((self->index + 2) % 3);
+
+  int should_group_7_play = !(self->index % 3);
+  int should_group_8_play = !((self->index + 1) % 3);
+  int group_7_alive = SYNC(&database, get_heartbeat, GROUP_7);
+  int group_8_alive = SYNC(&database, get_heartbeat, GROUP_8);
+
+  // Check if we SHOULD play the note.
+  if (should_we_play ||
+      (mode == CONDUCTOR_MODE && (
+        (should_group_7_play && !group_7_alive) ||
+        (should_group_8_play && !group_8_alive))))
+    {
+    int period = calc_period(self->notes[self->index] + self->key);
+    ASYNC(&soundPlayer, soundplayer_set_period, period);
+
+    /* Activate the musicPlayer */
+    SYNC(&soundPlayer, soundplayer_set_playing, true);
+    /* Play the tone */
+    BEFORE(MAX_LAG_DEADLINE, &soundPlayer, soundplayer_play_tone, 100);
+  }
 
   // Get the beat time, convert from beats per minute, to how many milliseconds for one beat.
   // In the beats list we count a half beat as 1x, one beat as 2x and two beats as 4x.
