@@ -49,7 +49,14 @@ void finish_input(App *self, int unused) {
 
 void heartbeat_tick(App *self, int unused) {
   // Send a heartbeat message every 200ms.
-  send_can_message_null(PRIORITY_HEARTBEAT, TYPE_HEARTBEAT);
+  if(self->mode == MUSICIAN_MODE) {
+    send_can_message_null(PRIORITY_HEARTBEAT, TYPE_HEARTBEAT);
+  } else if (self->mode == CONDUCTOR_MODE) {
+    int tempo = SYNC(&musicPlayer, get_tempo, 0);
+    int key = SYNC(&musicPlayer, get_key, 0);
+
+    conductor_send_state(tempo, key);
+  }
 
   SEND(MSEC(200), MAX_LAG_DEADLINE, self, heartbeat_tick, 0);
 }
