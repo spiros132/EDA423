@@ -46,7 +46,7 @@ int get_buffer_value_int(unsigned char buffer[8]) {
 
 int get_buffer_value_slice(unsigned char buffer[8], int start, int offset) {
   // Check that we have gotten correct values.
-  if (start - offset < 1 || start + offset > 7 || offset < 0 || start < 1) {
+  if (start < 0 || start >= 8 || offset < 0 || start + offset >= 8) {
     return -1;
   }
 
@@ -70,6 +70,21 @@ void receive_can_message(CANMsg* msg) {
       ASYNC(&database, update_heartbeat_on, group);
       ASYNC(&database, update_last_heartbeat, group);
     } else if(type == TYPE_CONDUCTOR_SEND_STATE) {
+      int current_conductor = SYNC(&database, get_current_conductor, 0);
+
+      if(current_conductor != msg->nodeId) {
+        #if LOG_LEVEL >= 1
+        SCI_WRITECHAR(&sci0, '\n');
+        SCI_WRITE(&sci0, "ERROR | Received conductor send state message from wrong conductor, node: ");
+        char strBuffer[4];
+        sprintf(strBuffer, "%d", msg->nodeId);
+        SCI_WRITE(&sci0, strBuffer);
+        SCI_WRITECHAR(&sci0, '\n');
+        #endif
+
+        return;
+      }
+
       // First two bytes are the tempo, the third byte is the key.
       int tempo = get_buffer_value_slice(msg->buff, 1, 2);
       int key = msg->buff[3];
@@ -86,6 +101,7 @@ void receive_can_message(CANMsg* msg) {
 
       ASYNC(&musicPlayer, set_tempo, tempo);
       ASYNC(&musicPlayer, set_key, key);
+      ASYNC(&database, update_heartbeat_on, group);
     } else {
       SCI_WRITE(&sci0, "ERROR | CONDUCTOR SEND STATE | Received type: ");
 
@@ -214,6 +230,8 @@ void send_can_message(unsigned char msgId, unsigned char buffer[8]) {
   msg.length = 8;
 
   CAN_SEND(&can0, &msg);
+
+  receive_can_message(&msg);
 
   #if LOG_LEVEL >= 3
   SCI_WRITECHAR(&sci0, '\n');
