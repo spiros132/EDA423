@@ -30,54 +30,72 @@ int get_type(unsigned char buffer[8]) {
   return -1;
 }
 
-int get_buffer_value_int(unsigned char buffer[8]) {
-  // Buffer starts at index 1, since index 0 is used for the type.
-  char strBuffer[8];
-  for (int i = 0; i < 7; i++) {
-    strBuffer[i] = (char)buffer[i+1];
-
-    if (buffer[i+1] == 0) {
-      break;
-    }
-  }
-
-  return atoi(strBuffer);
-}
-
-int get_buffer_value_slice(unsigned char buffer[8], int start, int offset) {
-  // Check that we have gotten correct values.
-  if (start < 0 || start >= 8 || offset < 0 || start + offset >= 8) {
+char get_buffer_char_at(unsigned char buffer[8], int index) {
+  if (index < 0 || index > 7) {
     return -1;
   }
 
-  int value = buffer[start];
-  for (int i = 1; i <= offset; i++) {
-    value = (value << sizeof(unsigned char)) | buffer[start + i];
+  return (char)buffer[index];
+}
+
+short get_buffer_short_at(unsigned char buffer[8], int index) {
+  if (index < 0 || index > 6) {
+    return -1;
   }
+
+  char char_size = sizeof(unsigned char);
+
+  short value = (
+    (buffer[index + 0] << (1 * char_size)) |
+    (buffer[index + 1] << (0 * char_size))
+  );
+
+  return value;
+}
+
+int get_buffer_int_at(unsigned char buffer[8], int index) {
+  if (index < 0 || index > 4) {
+    return -1;
+  }
+
+  char char_size = sizeof(unsigned char);
+
+  int value = (
+    (buffer[index + 0] << (3 * char_size)) |
+    (buffer[index + 1] << (2 * char_size)) |
+    (buffer[index + 2] << (1 * char_size)) |
+    (buffer[index + 3] << (0 * char_size))
+  );
 
   return value;
 }
 
 void receive_can_message(CANMsg* msg) {
+  int group = msg->nodeId;
   int priority = get_priority(msg->msgId);
+  int type = get_type(msg->buff);
+
 
   if (priority == PRIORITY_HEARTBEAT) {
-    // Heartbeat message.
-    int type = get_type(msg->buff);
-    int group = msg->nodeId;
-
     if (type == TYPE_HEARTBEAT) {
       ASYNC(&database, update_heartbeat_on, group);
       ASYNC(&database, update_last_heartbeat, group);
     } else if(type == TYPE_CONDUCTOR_SEND_STATE) {
       int current_conductor = SYNC(&database, get_current_conductor, 0);
 
-      if(current_conductor != msg->nodeId) {
+      // If there is no conductor yet, set the conductor to the group of the received message.
+      if (current_conductor == -1) {
+        SYNC(&database, update_current_conductor, group);
+        current_conductor = group;
+      }
+
+      // Check if the conductor is the correct one.
+      if(current_conductor != group) {
         #if LOG_LEVEL >= 1
         SCI_WRITECHAR(&sci0, '\n');
         SCI_WRITE(&sci0, "ERROR | Received conductor send state message from wrong conductor, node: ");
         char strBuffer[4];
-        sprintf(strBuffer, "%d", msg->nodeId);
+        sprintf(strBuffer, "%d", group);
         SCI_WRITE(&sci0, strBuffer);
         SCI_WRITECHAR(&sci0, '\n');
         #endif
@@ -86,8 +104,8 @@ void receive_can_message(CANMsg* msg) {
       }
 
       // First two bytes are the tempo, the third byte is the key.
-      int tempo = get_buffer_value_slice(msg->buff, 1, 2);
-      int key = msg->buff[3];
+      short tempo = get_buffer_short_at(msg->buff, 1);
+      char key = get_buffer_char_at(msg->buff, 3);
 
       if(tempo == -1) {
         SCI_WRITE(&sci0, "ERROR | Fault when trying to parse the tempo from conductor send state message.\n");
@@ -101,44 +119,49 @@ void receive_can_message(CANMsg* msg) {
 
       ASYNC(&musicPlayer, set_tempo, tempo);
       ASYNC(&musicPlayer, set_key, key);
+
+      // Update the heartbeat for the conductor.
       ASYNC(&database, update_heartbeat_on, group);
+      ASYNC(&database, update_last_heartbeat, group);
     } else {
       SCI_WRITE(&sci0, "ERROR | CONDUCTOR SEND STATE | Received type: ");
 
       // Char can only be maximum three characters long + null terminator.
       char strBuffer[4];
-      sprintf(strBuffer, "%d", msg->buff[0]);
+      sprintf(strBuffer, "%d", type);
       SCI_WRITE(&sci0, strBuffer);
       SCI_WRITECHAR(&sci0, '\n');
     }
   } else if (priority == PRIORITY_CONDUCTOR_CLAIM) {
-    // Conductor claim message.
-    int type = get_type(msg->buff);
-
     if (type == TYPE_CONDUCTOR_CLAIM) {
-      SYNC(&database, update_current_conductor, msg->nodeId);
+      SYNC(&database, update_current_conductor, group);
     } else {
       SCI_WRITE(&sci0, "ERROR | CONDUCTOR CLAIM | Received type: ");
 
       // Char can only be maximum three characters long + null terminator.
       char strBuffer[10];
-      sprintf(strBuffer, "%d", msg->buff[0]);
+      sprintf(strBuffer, "%d", type);
       SCI_WRITE(&sci0, strBuffer);
       SCI_WRITECHAR(&sci0, '\n');
     }
   } else if (priority == PRIORITY_CONDUCTOR) {
     // Conductor message.
-    int type = get_type(msg->buff);
-    int buff_value = get_buffer_value_int(msg->buff);
-
     int current_conductor = SYNC(&database, get_current_conductor, 0);
 
-    if(current_conductor != msg->nodeId) {
+    if(current_conductor == -1) {
+      #if LOG_LEVEL >= 1
+      SCI_WRITE(&sci0, "ERROR | No conductor has been chosen yet but we got a conductor message.\n");
+      #endif
+
+      return;
+    }
+
+    if(current_conductor != group) {
       #if LOG_LEVEL >= 1
       SCI_WRITECHAR(&sci0, '\n');
       SCI_WRITE(&sci0, "ERROR | Received conductor message from wrong conductor, node: ");
       char strBuffer[4];
-      sprintf(strBuffer, "%d", msg->nodeId);
+      sprintf(strBuffer, "%d", group);
       SCI_WRITE(&sci0, strBuffer);
       SCI_WRITECHAR(&sci0, '\n');
       #endif
@@ -152,32 +175,13 @@ void receive_can_message(CANMsg* msg) {
     char strBuffer[10];
     sprintf(strBuffer, "%d", type);
     SCI_WRITE(&sci0, strBuffer);
-    SCI_WRITE(&sci0, " and value: ");
-    sprintf(strBuffer, "%d", buff_value);
-    SCI_WRITE(&sci0, strBuffer);
     SCI_WRITECHAR(&sci0, '\n');
     #endif
 
     switch (type) {
       case TYPE_NOTE_TO_PLAY:
-        // Check are we supposed to be playing this note?
-        int buff_note = get_buffer_value_slice(msg->buff, 0, 3);
 
-        int should_we_not = (buff_note + 2) % 3;
 
-        if (should_we_not == 0) {
-          SCI_WRITE(&sci0, "Not playing note: ");
-          char strBuffer[10];
-          sprintf(strBuffer, "%d", buff_note);
-          SCI_WRITE(&sci0, strBuffer);
-          SCI_WRITECHAR(&sci0, '\n');
-          break;
-        }
-
-        ASYNC(&musicPlayer, play_note, buff_note);
-
-        SCI_WRITE(&sci0, "Playing note\n");
-        SCI_WRITECHAR(&sci0, buff_note);
         break;
       case TYPE_RESET:
         ASYNC(&musicPlayer, set_tempo, 120);
@@ -191,17 +195,19 @@ void receive_can_message(CANMsg* msg) {
         ASYNC(&musicPlayer, stop_music, 0);
         break;
       case TYPE_SET_TEMPO:
-        ASYNC(&musicPlayer, set_tempo, buff_value);
+        short tempo = get_buffer_short_at(msg->buff, 1);
+        ASYNC(&musicPlayer, set_tempo, tempo);
         break;
       case TYPE_SET_KEY:
-        ASYNC(&musicPlayer, set_key, buff_value);
+        char key = get_buffer_char_at(msg->buff, 1);
+        ASYNC(&musicPlayer, set_key, key);
         break;
       default:
         SCI_WRITE(&sci0, "ERROR | CONDUCTOR | Received type: ");
 
         // Char can only be maximum three characters long + null terminator.
         char strBuffer[10];
-        sprintf(strBuffer, "%d", msg->buff[0]);
+        sprintf(strBuffer, "%d", type);
         SCI_WRITE(&sci0, strBuffer);
         SCI_WRITECHAR(&sci0, '\n');
         break;
@@ -220,7 +226,7 @@ void receive_can_message(CANMsg* msg) {
 void send_can_message(unsigned char msgId, unsigned char buffer[8]) {
   CANMsg msg;
 
-  msg.nodeId = 2;
+  msg.nodeId = GROUP_13;
   msg.msgId = msgId;
 
   for (int i = 0; i < 8; i++) {
@@ -231,7 +237,7 @@ void send_can_message(unsigned char msgId, unsigned char buffer[8]) {
 
   CAN_SEND(&can0, &msg);
 
-  receive_can_message(&msg);
+  //receive_can_message(&msg);
 
   #if LOG_LEVEL >= 3
   SCI_WRITECHAR(&sci0, '\n');
