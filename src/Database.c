@@ -110,7 +110,7 @@ void check_heartbeat_7(Database *self, int last_heartbeat_time) {
       #if LOG_LEVEL >= 1
       SCI_WRITE(&sci0, "\nNo heartbeat from conductor, switching to new conductor: 8\n");
       #endif
-
+      
     } else if (self->heartbeats[GROUP_13] == 1) {
       self->current_conductor = GROUP_13;
 
@@ -170,6 +170,11 @@ void check_conductor_claim(Database *self, int unused) {
 
         SCI_WRITE(&sci0, "\nConductorship Void\n");
       }
+
+      // Clear the conductor claims.
+      self->conductor_claims[0] = 0;
+      self->conductor_claims[1] = 0;
+      self->conductor_claims[2] = 0;
 
       return;
     }
