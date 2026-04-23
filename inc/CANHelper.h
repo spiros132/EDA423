@@ -15,10 +15,25 @@ int get_priority(unsigned char msgID);
 /// @return The type of the CAN message, or -1 if the type is unknown.
 int get_type(unsigned char buffer[8]);
 
-/// @brief Get the value from the CAN message buffer.
+
+/// @brief Get a char value from the buffer at the given index.
 /// @param buffer The buffer of the CAN message.
-/// @return The value from the CAN message buffer, or -1 if the value is unknown.
-int get_buffer_value_int(unsigned char buffer[8]);
+/// @param index The index to get the char value from. Must be between 0 and 7 inclusive.
+/// @return The char value at the given index, or -1 if the index is out of bounds.
+char get_buffer_char_at(unsigned char buffer[8], int index);
+
+/// @brief Get a short value from the buffer at the given index.
+/// @param buffer The buffer of the CAN message.
+/// @param index The index to get the short value from. Must be between 0 and 6 inclusive.
+/// @return The short value at the given index, or -1 if the index is out of bounds.
+short get_buffer_short_at(unsigned char buffer[8], int index);
+
+/// @brief Get an int value from the buffer at the given index.
+/// @param buffer The buffer of the CAN message.
+/// @param index The index to get the int value from. Must be between 0 and 4 inclusive.
+/// @return The int value at the given index, or -1 if the index is out of bounds.
+int get_buffer_int_at(unsigned char buffer[8], int index);
+
 
 /// @brief Get a slice of the buffer.
 /// @param buffer The buffer of the CAN message.
