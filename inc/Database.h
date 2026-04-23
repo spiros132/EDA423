@@ -40,7 +40,7 @@ typedef struct {
   /* Last heartbeats */ \
   {0, 0, 0}, \
   /* Current conductor */ \
-  GROUP_13, \
+  -1, \
   /* Current note playing */ \
   0, \
   /* Current group playing */ \
@@ -113,6 +113,12 @@ int get_current_note_playing(Database *, int);
 /// @param int Unused parameter.
 /// @return The current group playing.
 int get_current_group_playing(Database *, int);
+
+/// @brief Get the amount of active boards based on the heartbeats.
+/// @param Database The database object.
+/// @param int Unused parameter.
+/// @return The amount of active boards.
+int get_active_boards(Database *, int);
 
 
 /// @brief Check the heartbeat for the group 7. This function should be called with a delay and aborted if we get a heartbeat before the delay is over.
