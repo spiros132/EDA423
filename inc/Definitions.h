@@ -49,10 +49,10 @@
 /* Timing Definitions */
 
 /// @brief The period for printing out the debug information about the current tempo and key.
-#define PRINT_DEBUG_INFO_PERIOD SEC(10)
+#define PRINT_DEBUG_INFO_PERIOD SEC(5)
 
 /// @brief The time between two heartbeat messages to check if the other boards are alive.
-#define HEARTBEAT_TIMEOUT MSEC(500)
+#define HEARTBEAT_TIMEOUT MSEC(250)
 
 /// @brief The maximum deadline to have so that there's no lag.
 #define MAX_LAG_DEADLINE MSEC(50)
