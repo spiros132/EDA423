@@ -3,6 +3,7 @@
 #include "canTinyTimber.h"
 #include "sciTinyTimber.h"
 #include "Definitions.h"
+#include "Conductor.h"
 #include "App.h"
 #include "Database.h"
 #include <stdlib.h>
@@ -176,21 +177,14 @@ void next_note(MusicPlayer *self, int unused)
   // Check if we are supposed to be playing this.
 
   int mode = SYNC(&app, get_mode, 0);
+  int active_boards = SYNC(&database, get_active_boards, 0);
 
 
-  int should_we_play = !((self->index + 2) % 3);
-
-  int should_group_7_play = !(self->index % 3);
-  int should_group_8_play = !((self->index + 1) % 3);
-  int group_7_alive = SYNC(&database, get_heartbeat, GROUP_7);
-  int group_8_alive = SYNC(&database, get_heartbeat, GROUP_8);
+  int should_we_play = (self->index + GROUP_13) % active_boards == 0;
 
   // Check if we SHOULD play the note.
-  if (should_we_play ||
-      (mode == CONDUCTOR_MODE && (
-        (should_group_7_play && !group_7_alive) ||
-        (should_group_8_play && !group_8_alive))))
-    {
+  if (should_we_play)
+  {
     int period = calc_period(self->notes[self->index] + self->key);
     ASYNC(&soundPlayer, soundplayer_set_period, period);
 
@@ -212,6 +206,11 @@ void next_note(MusicPlayer *self, int unused)
   self->finish_note_msg = SEND(MSEC(mspb), MAX_LAG_DEADLINE, self, finish_note, 0);
 
   self->index = (self->index + 1) % NOTES_AMOUNT;
+
+  // If we are the conductor, we should also send a message to the musicians with which current node we are playing.
+  if (mode == CONDUCTOR_MODE) {
+    conductor_send_note_to_play(self->index);
+  }
 }
 
 void finish_note(MusicPlayer *self, int unused)
