@@ -36,7 +36,7 @@ typedef struct {
   /* History Length */ \
   0, \
   /* Operation Mode */ \
-  CONDUCTOR_MODE, \
+  MUSICIAN_MODE, \
   /* Debug Msg */ \
   NULL \
 }
