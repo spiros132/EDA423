@@ -27,7 +27,7 @@ void update_last_heartbeat(Database *self, int group) {
         self->check_heartbeat_msgs[GROUP_7] = NULL;
       }
 
-      self->check_heartbeat_msgs[GROUP_7] = SEND(HEARTBEAT_TIMEOUT - MAX_LAG_DEADLINE, MAX_LAG_DEADLINE, self, check_heartbeat_7, current_time);
+      self->check_heartbeat_msgs[GROUP_7] = SEND(HEARTBEAT_TIMEOUT, MAX_LAG_DEADLINE, self, check_heartbeat_7, current_time);
       break;
     case GROUP_8:
       if (self->check_heartbeat_msgs[GROUP_8] != NULL) {
@@ -35,7 +35,7 @@ void update_last_heartbeat(Database *self, int group) {
         self->check_heartbeat_msgs[GROUP_8] = NULL;
       }
 
-      self->check_heartbeat_msgs[GROUP_8] = SEND(HEARTBEAT_TIMEOUT - MAX_LAG_DEADLINE, MAX_LAG_DEADLINE, self, check_heartbeat_8, current_time);
+      self->check_heartbeat_msgs[GROUP_8] = SEND(HEARTBEAT_TIMEOUT, MAX_LAG_DEADLINE, self, check_heartbeat_8, current_time);
       break;
     case GROUP_13:
       if (self->check_heartbeat_msgs[GROUP_13] != NULL) {
@@ -43,7 +43,7 @@ void update_last_heartbeat(Database *self, int group) {
         self->check_heartbeat_msgs[GROUP_13] = NULL;
       }
 
-      self->check_heartbeat_msgs[GROUP_13] = SEND(HEARTBEAT_TIMEOUT - MAX_LAG_DEADLINE, MAX_LAG_DEADLINE, self, check_heartbeat_13, current_time);
+      self->check_heartbeat_msgs[GROUP_13] = SEND(HEARTBEAT_TIMEOUT, MAX_LAG_DEADLINE, self, check_heartbeat_13, current_time);
       break;
     default:
       SCI_WRITE(&sci0, "Invalid group for heartbeat update\n");
@@ -98,6 +98,17 @@ int get_current_group_playing(Database *self, int unused) {
   return self->current_group_playing;
 }
 
+int get_active_boards(Database *self, int unused) {
+  int active_boards = 0;
+
+  for (int i = 0; i < 3; i++) {
+    if (self->heartbeats[i] == 1) {
+      active_boards++;
+    }
+  }
+
+  return active_boards;
+}
 
 void check_heartbeat_7(Database *self, int last_heartbeat_time) {
   update_heartbeat_off(self, GROUP_7);
@@ -108,15 +119,17 @@ void check_heartbeat_7(Database *self, int last_heartbeat_time) {
       self->current_conductor = GROUP_8;
 
       #if LOG_LEVEL >= 1
-      SCI_WRITE(&sci0, "\nNo heartbeat from conductor, switching to new conductor: 8\n");
+      SCI_WRITE(&sci0, "\nNo heartbeat from conductor 7, switching to new conductor: 8\n");
       #endif
-      
+
     } else if (self->heartbeats[GROUP_13] == 1) {
       self->current_conductor = GROUP_13;
 
       #if LOG_LEVEL >= 1
-      SCI_WRITE(&sci0, "\nNo heartbeat from conductor, switching to new conductor: 13\n");
+      SCI_WRITE(&sci0, "\nNo heartbeat from conductor 7 or 8, switching to new conductor: 13\n");
       #endif
+    } else {
+      SCI_WRITE(&sci0, "\nCheck heartbeat 7... We shouldn't be able to get here!\n");
     }
   }
 }
@@ -124,20 +137,37 @@ void check_heartbeat_7(Database *self, int last_heartbeat_time) {
 void check_heartbeat_8(Database *self, int last_heartbeat_time) {
   update_heartbeat_off(self, GROUP_8);
 
-  if (self->heartbeats[GROUP_13] == 1) {
-    self->current_conductor = GROUP_13;
+  if (self->current_conductor == GROUP_8){
+    if (self->heartbeats[GROUP_7] == 1) {
+      self->current_conductor = GROUP_7;
 
-    #if LOG_LEVEL >= 1
-    SCI_WRITE(&sci0, "\nNo heartbeat from conductor, switching to new conductor: 13\n");
-    #endif
+      #if LOG_LEVEL >= 1
+      SCI_WRITE(&sci0, "\nNo heartbeat from conductor 8, switching to new conductor: 7\n");
+      #endif
+    } else if (self->heartbeats[GROUP_13] == 1) {
+      self->current_conductor = GROUP_13;
+
+      #if LOG_LEVEL >= 1
+      SCI_WRITE(&sci0, "\nNo heartbeat from conductor 8, switching to new conductor: 13\n");
+      #endif
+    } else {
+      SCI_WRITE(&sci0, "\nCheck heartbeat 8... We shouldn't be able to get here!\n");
+    }
   }
 }
 
 void check_heartbeat_13(Database *self, int last_heartbeat_time) {
   update_heartbeat_off(self, GROUP_13);
 
-  if (self->heartbeats[GROUP_13] == 1) {
-    SCI_WRITE(&sci0, "\nWe shouldn't be able to get here.\n");
+  // Since we were the conductor, just reset and go back to musician mode.
+  if (self->current_conductor == GROUP_13){
+    self->current_conductor = -1;
+
+    #if LOG_LEVEL >= 1
+    SCI_WRITE(&sci0, "\nResetting conductor state. Most probably a fault with our heartbeat / CAN system.\n");
+    #endif
+
+    SYNC(&app, set_mode, MUSICIAN_MODE);
   }
 }
 
@@ -146,7 +176,7 @@ void check_conductor_claim(Database *self, int unused) {
 
   // The first conductor found with the lowest rank will become the conductor.
   for (int i = 0; i < 3; i++) {
-    if (self->conductor_claims[i] == 1) {
+    if (self->conductor_claims[i] == 1 && self->current_conductor != i) {
       self->current_conductor = i;
 
       #if LOG_LEVEL >= 1
