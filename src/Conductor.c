@@ -4,6 +4,7 @@
 #include "canTinyTimber.h"
 #include "sciTinyTimber.h"
 #include "CANHelper.h"
+#include "Conductor.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -13,20 +14,20 @@ extern Serial sci0;
 #endif
 
 
-void conductor_send_state(int tempo, int key) {
+void conductor_send_state(short tempo, char key) {
   unsigned char buff[8] = {0};
 
   // Two bytes for the tempo.
   buff[0] = TYPE_CONDUCTOR_SEND_STATE;
-  buff[1] = (tempo >> 1 * sizeof(unsigned char)) & 0xFF;
-  buff[2] = (tempo >> 0 * sizeof(unsigned char)) & 0xFF;
+  buff[1] = (tempo >> (1 * sizeof(unsigned char))) & 0xFF;
+  buff[2] = (tempo >> (0 * sizeof(unsigned char))) & 0xFF;
 
   // One byte for the key.
   buff[3] = key & 0xFF;
 
   send_can_message(PRIORITY_HEARTBEAT, buff);
 
-  #if LOG_LEVEL >= 2
+  #if LOG_LEVEL >= 3
   char strBuff[10];
 
   sprintf(strBuff, "%d", tempo);
@@ -41,19 +42,15 @@ void conductor_send_state(int tempo, int key) {
   #endif
 }
 
-void conductor_send_note_to_play(int note) {
+void conductor_send_note_to_play(char note) {
   unsigned char buff[8] = {0};
 
   buff[0] = TYPE_NOTE_TO_PLAY;
-  // Four bytes for the note. Big endian order.
-  buff[1] = (note >> 3 * sizeof(unsigned char)) & 0xFF;
-  buff[2] = (note >> 2 * sizeof(unsigned char)) & 0xFF;
-  buff[3] = (note >> 1 * sizeof(unsigned char)) & 0xFF;
-  buff[4] = (note >> 0 * sizeof(unsigned char)) & 0xFF;
+  buff[1] = note & 0xFF;
 
   send_can_message(PRIORITY_CONDUCTOR, buff);
 
-  #if LOG_LEVEL >= 2
+  #if LOG_LEVEL >= 3
   char strBuff[10];
   sprintf(strBuff, "%d", note);
   SCI_WRITE(&sci0, "\nSent note: ");
@@ -86,13 +83,13 @@ void conductor_send_stop() {
   #endif
 }
 
-void conductor_send_tempo(int tempo) {
+void conductor_send_tempo(short tempo) {
   unsigned char buff[8] = {0};
   buff[0] = TYPE_SET_TEMPO;
 
   // Two bytes for the tempo.
-  buff[1] = (tempo >> 1 * sizeof(unsigned char)) & 0xFF;
-  buff[2] = (tempo >> 0 * sizeof(unsigned char)) & 0xFF;
+  buff[1] = (tempo >> (1 * sizeof(unsigned char))) & 0xFF;
+  buff[2] = (tempo >> (0 * sizeof(unsigned char))) & 0xFF;
 
   send_can_message(PRIORITY_CONDUCTOR, buff);
 
@@ -105,11 +102,10 @@ void conductor_send_tempo(int tempo) {
   #endif
 }
 
-void conductor_send_key(int key) {
+void conductor_send_key(char key) {
   unsigned char buff[8] = {0};
   buff[0] = TYPE_SET_KEY;
-  buff[1] = (key >> 8 * sizeof(unsigned char)) & 0xFF;
-  buff[2] = (key >> 0 * sizeof(unsigned char)) & 0xFF;
+  buff[1] = key & 0xFF;
 
   send_can_message(PRIORITY_CONDUCTOR, buff);
 
