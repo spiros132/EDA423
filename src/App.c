@@ -233,10 +233,10 @@ void startApp(App *self, int arg) {
   heartbeat_tick(self, 0);
 
   // Check for other conductors.
-  int current_time = CURRENT_OFFSET();
+  //int current_time = CURRENT_OFFSET();
 
-  SEND(MSEC(200), MAX_LAG_DEADLINE, &database, check_heartbeat_7, current_time);
-  SEND(MSEC(200), MAX_LAG_DEADLINE, &database, check_heartbeat_8, current_time);
+  //SEND(MSEC(200), MAX_LAG_DEADLINE, &database, check_heartbeat_7, current_time);
+  //SEND(MSEC(200), MAX_LAG_DEADLINE, &database, check_heartbeat_8, current_time);
 }
 
 int main() {
