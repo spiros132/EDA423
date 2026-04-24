@@ -113,6 +113,12 @@ int get_active_boards(Database *self, int unused) {
 void check_heartbeat_7(Database *self, int last_heartbeat_time) {
   update_heartbeat_off(self, GROUP_7);
 
+  // Check for silent failure.
+  if(self->heartbeats[GROUP_8] == 0) {
+    // No heartbeat gotten from anybody. This means that it's a silent failure.
+    SCI_WRITE(&sci0, "\nNo heartbeat from anybody. Most probably have failed completely and removed the cable.\n");
+  }
+
   // No heartbeat from the conductor
   if(self->current_conductor == GROUP_7) {
     if (self->heartbeats[GROUP_8] == 1) {
@@ -136,6 +142,12 @@ void check_heartbeat_7(Database *self, int last_heartbeat_time) {
 
 void check_heartbeat_8(Database *self, int last_heartbeat_time) {
   update_heartbeat_off(self, GROUP_8);
+
+  // Check for silent failure.
+  if(self->heartbeats[GROUP_7] == 0) {
+    // No heartbeat gotten from anybody. This means that it's a silent failure.
+    SCI_WRITE(&sci0, "\nNo heartbeat from anybody. Most probably have failed completely and removed the cable.\n");
+  }
 
   if (self->current_conductor == GROUP_8){
     if (self->heartbeats[GROUP_7] == 1) {
