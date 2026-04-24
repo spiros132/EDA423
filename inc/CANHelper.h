@@ -55,6 +55,7 @@ void send_can_message(unsigned char msgId, unsigned char buffer[8]);
 
 /// @brief Send a CAN message with the given message ID and an empty buffer.
 /// @param msgId The message ID of the CAN message.
+/// @param type The type of the CAN message, which will be put in the first index of the buffer.
 void send_can_message_null(unsigned char priority, unsigned char type);
 
 
