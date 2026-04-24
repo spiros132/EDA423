@@ -44,13 +44,13 @@ int get_index(MusicPlayer *self, int unused)
 void set_tempo(MusicPlayer *self, int tempo)
 {
   // Clamp the tempo
-  if (tempo < 60)
+  if (tempo < 30)
   {
-    tempo = 60;
+    tempo = 30;
   }
-  else if (tempo > 240)
+  else if (tempo > 300)
   {
-    tempo = 240;
+    tempo = 300;
   }
 
   self->tempo = tempo;
@@ -144,7 +144,7 @@ void play_note(MusicPlayer *self, int index)
 {
   int period = calc_period(self->notes[index] + self->key);
   SYNC(&soundPlayer, soundplayer_set_playing, true);
-  ASYNC(&soundPlayer, soundplayer_set_period, period);
+  BEFORE(MAX_LAG_DEADLINE, &soundPlayer, soundplayer_set_period, period);
 
   // Schedule the play_tone function to run.
   BEFORE(MAX_LAG_DEADLINE, &soundPlayer, soundplayer_play_tone, period);
@@ -180,18 +180,18 @@ void next_note(MusicPlayer *self, int unused)
   int active_boards = SYNC(&database, get_active_boards, 0);
 
 
-  int should_we_play = (self->index + GROUP_13) % active_boards == 0;
+  int should_we_play = self->index % active_boards == (active_boards - 1);
 
   // Check if we SHOULD play the note.
   if (should_we_play)
   {
     int period = calc_period(self->notes[self->index] + self->key);
-    ASYNC(&soundPlayer, soundplayer_set_period, period);
+    BEFORE(MAX_LAG_DEADLINE, &soundPlayer, soundplayer_set_period, period);
 
     /* Activate the musicPlayer */
     SYNC(&soundPlayer, soundplayer_set_playing, true);
     /* Play the tone */
-    BEFORE(MAX_LAG_DEADLINE, &soundPlayer, soundplayer_play_tone, 100);
+    BEFORE(MAX_LAG_DEADLINE, &soundPlayer, soundplayer_play_tone, true);
   }
 
   // Get the beat time, convert from beats per minute, to how many milliseconds for one beat.
