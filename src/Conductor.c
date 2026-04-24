@@ -19,7 +19,7 @@ void conductor_send_state(short tempo, char key) {
 
   // Two bytes for the tempo.
   buff[0] = TYPE_CONDUCTOR_SEND_STATE;
-  buff[1] = (tempo >> (1 * sizeof(unsigned char))) & 0xFF;
+  buff[1] = (tempo >> (8 * sizeof(unsigned char))) & 0xFF;
   buff[2] = (tempo >> (0 * sizeof(unsigned char))) & 0xFF;
 
   // One byte for the key.
@@ -88,7 +88,7 @@ void conductor_send_tempo(short tempo) {
   buff[0] = TYPE_SET_TEMPO;
 
   // Two bytes for the tempo.
-  buff[1] = (tempo >> (1 * sizeof(unsigned char))) & 0xFF;
+  buff[1] = (tempo >> (8 * sizeof(unsigned char))) & 0xFF;
   buff[2] = (tempo >> (0 * sizeof(unsigned char))) & 0xFF;
 
   send_can_message(PRIORITY_CONDUCTOR, buff);
