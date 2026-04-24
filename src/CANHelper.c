@@ -13,6 +13,9 @@ extern Can can0;
 extern Database database;
 extern MusicPlayer musicPlayer;
 
+/// @brief A boolean value to indicate if we have lost connection when trying to send a message with the CAN bus.
+static int silent_failure = 0;
+
 int get_priority(unsigned char msgID) {
   if (msgID == 0 || msgID == 1 || msgID == 7) {
     return msgID;
@@ -71,10 +74,12 @@ int get_buffer_int_at(unsigned char buffer[8], int index) {
 }
 
 void receive_can_message(CANMsg* msg) {
+  // Since we got a can message, reset the silent failure to false.
+  silent_failure = false;
+
   int group = msg->nodeId;
   int priority = get_priority(msg->msgId);
   int type = get_type(msg->buff);
-
 
   if (priority == PRIORITY_HEARTBEAT) {
     if (type == TYPE_HEARTBEAT) {
@@ -180,8 +185,8 @@ void receive_can_message(CANMsg* msg) {
 
     switch (type) {
       case TYPE_NOTE_TO_PLAY:
-
-
+        char note = get_buffer_char_at(msg->buff, 1);
+        ASYNC(&musicPlayer, set_index, note);
         break;
       case TYPE_RESET:
         ASYNC(&musicPlayer, set_tempo, 120);
@@ -224,6 +229,11 @@ void receive_can_message(CANMsg* msg) {
 }
 
 void send_can_message(unsigned char msgId, unsigned char buffer[8]) {
+  if (silent_failure) {
+    SCI_WRITE(&sci0, "ERROR | We have lost connection to the CAN bus, cannot send message. Now waiting for reconnection...\n");
+    return;
+  }
+  
   CANMsg msg;
 
   msg.nodeId = GROUP_13;
@@ -235,7 +245,7 @@ void send_can_message(unsigned char msgId, unsigned char buffer[8]) {
 
   msg.length = 8;
 
-  CAN_SEND(&can0, &msg);
+  silent_failure = CAN_SEND(&can0, &msg);
 
   //receive_can_message(&msg);
 
