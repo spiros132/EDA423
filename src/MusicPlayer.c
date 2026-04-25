@@ -227,4 +227,8 @@ void musicplayer_reset_board(MusicPlayer *self, int unused)
   self->playing = false;
   self->tempo = 120;
   self->key = 0;
+
+  #if LOG_LEVEL >= 2
+  SCI_WRITE(&sci0, "\nINFO | Music player reset to default state\n");
+  #endif
 }
