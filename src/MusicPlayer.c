@@ -133,37 +133,15 @@ void toggle_music(MusicPlayer *self, int unused)
 
 void abort_msg(MusicPlayer *self, int unused)
 {
-  ABORT(self->next_note_msg);
-  ABORT(self->finish_note_msg);
+  if(self->next_note_msg != NULL) {
+    ABORT(self->next_note_msg);
+    self->next_note_msg = NULL;
+  }
 
-  self->next_note_msg = NULL;
-  self->finish_note_msg = NULL;
-}
-
-void play_note(MusicPlayer *self, int index)
-{
-  int period = calc_period(self->notes[index] + self->key);
-  SYNC(&soundPlayer, soundplayer_set_playing, true);
-  BEFORE(MAX_LAG_DEADLINE, &soundPlayer, soundplayer_set_period, period);
-
-  // Schedule the play_tone function to run.
-  BEFORE(MAX_LAG_DEADLINE, &soundPlayer, soundplayer_play_tone, period);
-
-  // Get the beat time, convert from beats per minute, to how many milliseconds for one beat.
-  // In the beats list we count a half beat as 1x, one beat as 2x and two beats as 4x.
-  // 30000 = (60/2 (because of the above reason)) * 1000 (for milliseconds)
-  int mspb = self->beats[index] * (30000.0 / self->tempo) - 50;
-  // bpm = beats/minute
-  // x = millisekunder/beat
-  // 60/bpm = (60/2*minute)/beat * 1000
-
-  self->finish_note_msg = SEND(MSEC(mspb), MAX_LAG_DEADLINE, self, stop_note, 0);
-}
-
-void stop_note(MusicPlayer *self, int unused)
-{
-  SYNC(&soundPlayer, soundplayer_set_playing, false);
-  SCI_WRITE(&sci0, "Finished playing note\n");
+  if(self->finish_note_msg != NULL) {
+    ABORT(self->finish_note_msg);
+    self->finish_note_msg = NULL;
+  }
 }
 
 void next_note(MusicPlayer *self, int unused)
@@ -178,6 +156,17 @@ void next_note(MusicPlayer *self, int unused)
 
   int mode = SYNC(&app, get_mode, 0);
   int active_boards = SYNC(&database, get_active_boards, 0);
+
+  // Check if there are any active boards at all.
+  if (active_boards == 0) {
+    SCI_WRITE(&sci0, "\nNo active boards found. Stop playing.\n");
+
+    // Reset the states
+    self->playing = false;
+    SYNC(&soundPlayer, soundplayer_set_playing, false);
+
+    return;
+  }
 
 
   int should_we_play = self->index % active_boards == (active_boards - 1);

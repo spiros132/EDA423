@@ -63,17 +63,6 @@ void toggle_music(MusicPlayer *, int);
 void abort_msg(MusicPlayer *, int);
 
 
-/// @brief This function plays a singular note.
-/// @param MusicPlayer The MusicPlayer object.
-/// @param int The index of the note to play, where 0 is the first index of the period list.
-void play_note(MusicPlayer *, int);
-
-/// @brief This function stops the currently playing note.
-/// @param MusicPlayer The MusicPlayer object.
-/// @param int Not used. Required only for the TinyTimber message signature.
-void stop_note(MusicPlayer *, int);
-
-
 /// @brief Start playing the song by yourself, deprecated functionality for the HA1.
 /// @param MusicPlayer The MusicPlayer object.
 /// @param int Unused parameter.
@@ -83,7 +72,6 @@ void next_note(MusicPlayer *, int);
 /// @param MusicPlayer The MusicPlayer object.
 /// @param int Unused parameter.
 void finish_note(MusicPlayer *, int);
-
 
 
 /// @brief Gets the tempo of the music player.
