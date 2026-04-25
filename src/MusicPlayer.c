@@ -210,3 +210,21 @@ void finish_note(MusicPlayer *self, int unused)
   // Run next_note after 50 ms and make it so that it should have finished putting all the settings etc after 100
   self->next_note_msg = SEND(MSEC(50), MAX_LAG_DEADLINE, self, next_note, 0);
 }
+
+void musicplayer_reset_board(MusicPlayer *self, int unused)
+{
+  if (self->next_note_msg != NULL) {
+    ABORT(self->next_note_msg);
+    self->next_note_msg = NULL;
+  }
+
+  if (self->finish_note_msg != NULL) {
+    ABORT(self->finish_note_msg);
+    self->finish_note_msg = NULL;
+  }
+
+  self->index = 0;
+  self->playing = false;
+  self->tempo = 120;
+  self->key = 0;
+}

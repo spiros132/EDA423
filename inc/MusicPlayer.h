@@ -109,5 +109,9 @@ void set_key(MusicPlayer *, int);
 /// @param int The index to set.
 void set_index(MusicPlayer *, int);
 
+/// @brief Resets music player object to it's default state.
+/// @param MusicPlayer The MusicPlayer object.
+/// @param int Unused parameter.
+void musicplayer_reset_board(MusicPlayer *, int);
 
 #endif
