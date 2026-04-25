@@ -1,5 +1,5 @@
 #ifndef _CAN_HELPER_H
-#define _CAN_HELPER_H4
+#define _CAN_HELPER_H
 
 #include "canTinyTimber.h"
 #include "Definitions.h"
@@ -14,13 +14,6 @@ int get_priority(unsigned char msgID);
 /// @param buffer The buffer of the CAN message.
 /// @return The type of the CAN message, or -1 if the type is unknown.
 int get_type(unsigned char buffer[8]);
-
-
-/// @brief Get a char value from the buffer at the given index.
-/// @param buffer The buffer of the CAN message.
-/// @param index The index to get the char value from. Must be between 0 and 7 inclusive.
-/// @return The char value at the given index, or -1 if the index is out of bounds.
-char get_buffer_char_at(unsigned char buffer[8], int index);
 
 /// @brief Get a short value from the buffer at the given index.
 /// @param buffer The buffer of the CAN message.
