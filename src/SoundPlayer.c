@@ -142,3 +142,18 @@ void soundplayer_toggle_muted(SoundPlayer *self, int unused) {
   SCI_WRITE(&sci0, "INFO | Toggled mute\n");
   #endif
 }
+
+void soundplayer_reset_board(SoundPlayer *self, int unused) {
+  if (self->play_tone_msg != NULL) {
+    ABORT(self->play_tone_msg);
+    self->play_tone_msg = NULL;
+  }
+
+  DAC_REG = 0;
+  self->playing = false;
+  self->current_period = 0;
+
+  #if LOG_LEVEL >= 2
+  SCI_WRITE(&sci0, "INFO | Sound player reset to default state\n");
+  #endif
+}

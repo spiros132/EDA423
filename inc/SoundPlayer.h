@@ -86,4 +86,9 @@ void soundplayer_decrease_volume(SoundPlayer *, int);
 /// @param int Unused parameter.
 void soundplayer_toggle_muted(SoundPlayer *, int);
 
+/// @brief Resets sound player object to it's default state.
+/// @param SoundPlayer The SoundPlayer object.
+/// @param int Unused parameter.
+void soundplayer_reset_board(SoundPlayer *, int);
+
 #endif
