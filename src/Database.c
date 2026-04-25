@@ -71,14 +71,6 @@ void set_current_conductor(Database *self, int conductor) {
   self->current_conductor = conductor;
 }
 
-void update_current_note_playing(Database *self, int note) {
-  self->current_note_playing = note;
-}
-
-void update_current_group_playing(Database *self, int group) {
-  self->current_group_playing = group;
-}
-
 
 int get_heartbeat(Database *self, int group) {
   if (group < 0 || group > 2) {
@@ -98,14 +90,6 @@ int get_last_heartbeat(Database *self, int group) {
 
 int get_current_conductor(Database *self, int unused) {
   return self->current_conductor;
-}
-
-int get_current_note_playing(Database *self, int unused) {
-  return self->current_note_playing;
-}
-
-int get_current_group_playing(Database *self, int unused) {
-  return self->current_group_playing;
 }
 
 int get_active_boards(Database *self, int unused) {
@@ -232,3 +216,25 @@ void check_conductor_claim(Database *self, int unused) {
     }
   }
 }
+
+void database_reset_board(Database *self, int unused) {
+  // Reset all the values to default.
+  for (int i = 0; i < 3; i++) {
+    self->heartbeats[i] = 0;
+    self->last_heartbeats[i] = 0;
+    self->conductor_claims[i] = 0;
+
+    if (self->check_heartbeat_msgs[i] != NULL) {
+      ABORT(self->check_heartbeat_msgs[i]);
+      self->check_heartbeat_msgs[i] = NULL;
+    }
+  }
+
+  self->current_conductor = -1;
+
+  if (self->check_conductor_claim_msg != NULL) {
+    ABORT(self->check_conductor_claim_msg);
+    self->check_conductor_claim_msg = NULL;
+  }
+}
+

@@ -17,12 +17,6 @@ typedef struct {
   /// @brief The current conductor of the group.
   int current_conductor;
 
-  /// @brief The current note playing.
-  int current_note_playing;
-
-  /// @brief The current group playing.
-  int current_group_playing;
-
   /// @brief The groups that are claiming to be conductors.
   int conductor_claims[3];
 
@@ -41,10 +35,6 @@ typedef struct {
   {0, 0, 0}, \
   /* Current conductor */ \
   -1, \
-  /* Current note playing */ \
-  0, \
-  /* Current group playing */ \
-  0, \
   /* Conductor claims */ \
   {0, 0, 0}, \
   /* Check heartbeat messages */ \
@@ -78,16 +68,6 @@ void update_current_conductor(Database *, int);
 /// @param int The new current conductor.
 void set_current_conductor(Database *, int);
 
-/// @brief Update the current note playing.
-/// @param Database The database object.
-/// @param int The new current note playing.
-void update_current_note_playing(Database *, int);
-
-/// @brief Update the current group playing.
-/// @param Database The database object.
-/// @param int The new current group playing.
-void update_current_group_playing(Database *, int);
-
 
 /// @brief Get the heartbeat of a group.
 /// @param Database The database object.
@@ -106,18 +86,6 @@ int get_last_heartbeat(Database *, int);
 /// @param int Unused parameter.
 /// @return The current conductor of the group.
 int get_current_conductor(Database *, int);
-
-/// @brief Get the current note playing.
-/// @param Database The database object.
-/// @param int Unused parameter.
-/// @return The current note playing.
-int get_current_note_playing(Database *, int);
-
-/// @brief Get the current group playing.
-/// @param Database The database object.
-/// @param int Unused parameter.
-/// @return The current group playing.
-int get_current_group_playing(Database *, int);
 
 /// @brief Get the amount of active boards based on the heartbeats.
 /// @param Database The database object.
@@ -145,6 +113,12 @@ void check_heartbeat_13(Database *, int);
 /// @param Database The database object.
 /// @param int Unused parameter.
 void check_conductor_claim(Database *, int);
+
+
+/// @brief Resets the database object to its default state.
+/// @param Database The database object.
+/// @param int Unused parameter.
+void database_reset_board(Database *, int);
 
 
 #endif
