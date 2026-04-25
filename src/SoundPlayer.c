@@ -18,8 +18,11 @@ extern Serial sci0;
 
 void soundplayer_play_tone(SoundPlayer *self, int play) {
   if(!(self->playing)){
-    ABORT(self->play_tone_msg);
-    self->play_tone_msg = NULL;
+    if(self->play_tone_msg != NULL) {
+      ABORT(self->play_tone_msg);
+      self->play_tone_msg = NULL;
+    }
+
     DAC_REG = 0;
 
     #if LOG_LEVEL >= 2
@@ -50,8 +53,10 @@ void soundplayer_play_tone(SoundPlayer *self, int play) {
 
 void soundplayer_set_playing(SoundPlayer *self, int value) {
   if (!value) {
-    ABORT(self->play_tone_msg);
-    self->play_tone_msg = NULL;
+    if (self->play_tone_msg != NULL) {
+      ABORT(self->play_tone_msg);
+      self->play_tone_msg = NULL;
+    }
     DAC_REG = 0;
   }
 
@@ -71,8 +76,7 @@ void soundplayer_set_period(SoundPlayer *self, int value) {
   self->current_period = value;
 
   #if LOG_LEVEL >= 3
-  // Maximum characters are three, since volume can be between 0 and 20, and also null terminator.
-  char strBuffer[3];
+  char strBuffer[10];
   sprintf(strBuffer, "%d", value);
 
   SCI_WRITECHAR(&sci0, '\n');
