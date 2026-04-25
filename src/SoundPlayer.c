@@ -154,6 +154,6 @@ void soundplayer_reset_board(SoundPlayer *self, int unused) {
   self->current_period = 0;
 
   #if LOG_LEVEL >= 2
-  SCI_WRITE(&sci0, "INFO | Sound player reset to default state\n");
+  SCI_WRITE(&sci0, "\nINFO | Sound player reset to default state\n");
   #endif
 }
