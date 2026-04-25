@@ -77,11 +77,11 @@
 #define KEY_MUTE 't'
 
 /// @brief The key for setting the volume to a specific value.
-#define KEY_SET_VOLUME 'v'
+#define KEY_SET_VOLUME 'z'
 /// @brief The key for setting the key of the music to a specific value.
-#define KEY_SET_KEY 'b'
+#define KEY_SET_KEY 'x'
 /// @brief The key for setting the tempo to a specific value.
-#define KEY_SET_TEMPO 'n'
+#define KEY_SET_TEMPO 'c'
 
 /// @brief The key for stopping the music.
 #define KEY_MUSIC_STOP 's'
@@ -89,6 +89,9 @@
 #define KEY_MUSIC_PLAY 'p'
 /// @brief The key for toggling the music (play/stop).
 #define KEY_MUSIC_PLAY_2 ' '
+/// @brief The key for restarting the music.
+#define KEY_MUSIC_RESTART 'o'
+
 
 /// @brief The key for enabling debug printing of tempo and key.
 #define KEY_TOGGLE_DEBUG_PRINTING 'd'
@@ -104,7 +107,6 @@
 
 #define KEY_FAILURE_1 'j'
 #define KEY_FAILURE_2 'k'
-#define KEY_FAILURE_3 'l'
 
 
 /* Debug Definitions */
