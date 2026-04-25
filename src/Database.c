@@ -236,5 +236,9 @@ void database_reset_board(Database *self, int unused) {
     ABORT(self->check_conductor_claim_msg);
     self->check_conductor_claim_msg = NULL;
   }
+
+  #if LOG_LEVEL >= 2
+  SCI_WRITE(&sci0, "\nINFO | Database reset to default state\n");
+  #endif
 }
 
