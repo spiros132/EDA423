@@ -33,14 +33,6 @@ int get_type(unsigned char buffer[8]) {
   return -1;
 }
 
-char get_buffer_char_at(unsigned char buffer[8], int index) {
-  if (index < 0 || index > 7) {
-    return -1;
-  }
-
-  return (char)buffer[index];
-}
-
 short get_buffer_short_at(unsigned char buffer[8], int index) {
   if (index < 0 || index > 6) {
     return -1;
@@ -49,7 +41,7 @@ short get_buffer_short_at(unsigned char buffer[8], int index) {
   char char_size = sizeof(unsigned char);
 
   short value = (
-    (buffer[index + 0] << (1 * char_size)) |
+    (buffer[index + 0] << (8 * char_size)) |
     (buffer[index + 1] << (0 * char_size))
   );
 
@@ -64,10 +56,10 @@ int get_buffer_int_at(unsigned char buffer[8], int index) {
   char char_size = sizeof(unsigned char);
 
   int value = (
-    (buffer[index + 0] << (3 * char_size)) |
-    (buffer[index + 1] << (2 * char_size)) |
-    (buffer[index + 2] << (1 * char_size)) |
-    (buffer[index + 3] << (0 * char_size))
+    (buffer[index + 0] << (24 * char_size)) |
+    (buffer[index + 1] << (16 * char_size)) |
+    (buffer[index + 2] << (8  * char_size)) |
+    (buffer[index + 3] << (0  * char_size))
   );
 
   return value;
@@ -81,16 +73,27 @@ void receive_can_message(CANMsg* msg) {
   int priority = get_priority(msg->msgId);
   int type = get_type(msg->buff);
 
+  if(group != GROUP_7 && group != GROUP_8 && group != GROUP_13) {
+    SCI_WRITE(&sci0, "ERROR | Received CAN message with invalid group: ");
+
+    char strBuffer[4];
+    sprintf(strBuffer, "%d", group);
+    SCI_WRITE(&sci0, strBuffer);
+    SCI_WRITECHAR(&sci0, '\n');
+
+    return;
+  }
+
+
   if (priority == PRIORITY_HEARTBEAT) {
     if (type == TYPE_HEARTBEAT) {
-      ASYNC(&database, update_heartbeat_on, group);
-      ASYNC(&database, update_last_heartbeat, group);
+      BEFORE(MAX_LAG_DEADLINE, &database, update_last_heartbeat, group);
     } else if(type == TYPE_CONDUCTOR_SEND_STATE) {
       int current_conductor = SYNC(&database, get_current_conductor, 0);
 
       // If there is no conductor yet, set the conductor to the group of the received message.
       if (current_conductor == -1) {
-        SYNC(&database, update_current_conductor, group);
+        SYNC(&database, set_current_conductor, group);
         current_conductor = group;
       }
 
@@ -110,15 +113,10 @@ void receive_can_message(CANMsg* msg) {
 
       // First two bytes are the tempo, the third byte is the key.
       short tempo = get_buffer_short_at(msg->buff, 1);
-      char key = get_buffer_char_at(msg->buff, 3);
+      char key = (char)msg->buff[3];
 
       if(tempo == -1) {
         SCI_WRITE(&sci0, "ERROR | Fault when trying to parse the tempo from conductor send state message.\n");
-        return;
-      }
-
-      if (key == -1) {
-        SCI_WRITE(&sci0, "ERROR | Fault when trying to parse the key from conductor send state message.\n");
         return;
       }
 
@@ -126,8 +124,7 @@ void receive_can_message(CANMsg* msg) {
       ASYNC(&musicPlayer, set_key, key);
 
       // Update the heartbeat for the conductor.
-      ASYNC(&database, update_heartbeat_on, group);
-      ASYNC(&database, update_last_heartbeat, group);
+      BEFORE(MAX_LAG_DEADLINE, &database, update_last_heartbeat, group);
     } else {
       SCI_WRITE(&sci0, "ERROR | CONDUCTOR SEND STATE | Received type: ");
 
@@ -185,7 +182,7 @@ void receive_can_message(CANMsg* msg) {
 
     switch (type) {
       case TYPE_NOTE_TO_PLAY:
-        char note = get_buffer_char_at(msg->buff, 1);
+        char note = (char)msg->buff[1];
         ASYNC(&musicPlayer, set_index, note);
         break;
       case TYPE_RESET:
@@ -204,7 +201,7 @@ void receive_can_message(CANMsg* msg) {
         ASYNC(&musicPlayer, set_tempo, tempo);
         break;
       case TYPE_SET_KEY:
-        char key = get_buffer_char_at(msg->buff, 1);
+        char key = (char)msg->buff[1];
         ASYNC(&musicPlayer, set_key, key);
         break;
       default:
@@ -233,7 +230,7 @@ void send_can_message(unsigned char msgId, unsigned char buffer[8]) {
     SCI_WRITE(&sci0, "ERROR | We have lost connection to the CAN bus, cannot send message. Now waiting for reconnection...\n");
     return;
   }
-  
+
   CANMsg msg;
 
   msg.nodeId = GROUP_13;
