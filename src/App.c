@@ -7,6 +7,8 @@
 #include "Conductor.h"
 #include "Definitions.h"
 #include "Database.h"
+#include "MusicPlayer.h"
+#include "SoundPlayer.h"
 #include <stdlib.h>
 #include <math.h>
 #include <stdio.h>
@@ -32,6 +34,24 @@ void set_mode(App *self, int mode) {
   self->mode = mode;
 }
 
+void start_failure_mode(App *self, int unused) {
+  self->silent_failure = true;
+
+  reset_board(self, 0);
+}
+
+void stop_failure_mode(App *self, int unused) {
+  self->silent_failure = false;
+}
+
+void reset_board(App *self, int unused) {
+  self->mode = MUSICIAN_MODE;
+
+  BEFORE(MAX_LAG_DEADLINE, &database, database_reset_board, 0);
+  BEFORE(MAX_LAG_DEADLINE, &musicPlayer, musicplayer_reset_board, 0);
+  BEFORE(MAX_LAG_DEADLINE, &soundPlayer, soundplayer_reset_board, 0);
+}
+
 void finish_input(App *self, int unused) {
   self->buffer[self->bufferLength] = '\0';
 
@@ -48,6 +68,12 @@ void finish_input(App *self, int unused) {
 }
 
 void heartbeat_tick(App *self, int unused) {
+  if (self->silent_failure) {
+    SCI_WRITE(&sci0, "ERROR | We are in the silent failure mode.\n");
+    return;
+
+  }
+
   // Send the heartbeat to ourselves as well.
   BEFORE(MAX_LAG_DEADLINE, &database, update_last_heartbeat, GROUP_13);
 
@@ -93,6 +119,11 @@ void clear_input(App *self, int unused) {
 }
 
 void receiver(App *self, int unused) {
+  if(self->silent_failure) {
+    SCI_WRITE(&sci0, "ERROR | We are in the silent failure mode.\n");
+    return;
+  }
+
   CANMsg msg;
   CAN_RECEIVE(&can0, &msg);
 
@@ -204,7 +235,7 @@ void reader(App *self, int c) {
     }
     break;
   case KEY_FAILURE_1:
-
+    self->silent_failure = !self->silent_failure;
     break;
   case KEY_FAILURE_2:
 
