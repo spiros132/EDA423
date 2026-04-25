@@ -48,6 +48,9 @@ void finish_input(App *self, int unused) {
 }
 
 void heartbeat_tick(App *self, int unused) {
+  // Send the heartbeat to ourselves as well.
+  BEFORE(MAX_LAG_DEADLINE, &database, update_last_heartbeat, GROUP_13);
+
   // Send a heartbeat message every 200ms.
   if(self->mode == MUSICIAN_MODE) {
     send_can_message_null(PRIORITY_HEARTBEAT, TYPE_HEARTBEAT);
