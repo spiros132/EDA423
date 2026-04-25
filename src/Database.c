@@ -51,6 +51,7 @@ void update_last_heartbeat(Database *self, int group) {
   }
 
   self->last_heartbeats[group] = current_time;
+  update_heartbeat_on(self, group);
 }
 
 void update_current_conductor(Database *self, int conductor) {
@@ -59,6 +60,15 @@ void update_current_conductor(Database *self, int conductor) {
   if (self->check_conductor_claim_msg == NULL) {
     self->check_conductor_claim_msg = SEND(CONDUCTOR_CLAIM_TIMEOUT, MAX_LAG_DEADLINE, self, check_conductor_claim, 0);
   }
+}
+
+void set_current_conductor(Database *self, int conductor) {
+  if (conductor < 0 || conductor > 2) {
+    SCI_WRITE(&sci0, "Invalid conductor to set\n");
+    return;
+  }
+
+  self->current_conductor = conductor;
 }
 
 void update_current_note_playing(Database *self, int note) {

@@ -73,6 +73,11 @@ void update_last_heartbeat(Database *, int);
 /// @param int The new current conductor.
 void update_current_conductor(Database *, int);
 
+/// @brief Update the current conductor.
+/// @param Database The database object.
+/// @param int The new current conductor.
+void set_current_conductor(Database *, int);
+
 /// @brief Update the current note playing.
 /// @param Database The database object.
 /// @param int The new current note playing.
