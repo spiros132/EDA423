@@ -182,6 +182,12 @@ void reader(App *self, int c) {
       conductor_send_play();
     }
     break;
+  case KEY_MUSIC_RESTART:
+    if(self->mode == CONDUCTOR_MODE) {
+      conductor_send_stop();
+      conductor_send_play();
+    }
+    break;
   case KEY_TOGGLE_DEBUG_PRINTING:
     if (self->debug_msg != NULL) {
       ABORT(self->debug_msg);
@@ -201,9 +207,6 @@ void reader(App *self, int c) {
 
     break;
   case KEY_FAILURE_2:
-
-    break;
-  case KEY_FAILURE_3:
 
     break;
   case '-':
