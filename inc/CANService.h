@@ -8,14 +8,20 @@
 typedef struct {
   Object super;
 
-  int is_silent;
+  /// @brief A boolean to indicate whether we want the board to stop responding and getting messages.
+  int force_silent;
+
+  /// @brief A boolean to indicate whether the board has been failing to connect to the CAN bus.
+  int bus_can_missing;
 } CANService;
 
 
 #define initCANService() \
 { \
   initObject(), \
-  /* is_silent */ \
+  /* force_silent */ \
+  false, \
+  /* bus_can_missing */ \
   false \
 }
 
