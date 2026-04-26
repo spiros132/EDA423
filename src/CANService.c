@@ -353,6 +353,10 @@ void can_receive_message(CANService *self, int unused) {
       case TYPE_NOTE_TO_PLAY:
         char note = (char)msg.buff[1];
         ASYNC(&musicPlayer, set_index, note);
+
+        if(!SYNC(&musicPlayer, is_playing, 0)) {
+          ASYNC(&musicPlayer, start_playing, 0);
+        }
         break;
       case TYPE_RESET:
         ASYNC(&musicPlayer, set_tempo, 120);
