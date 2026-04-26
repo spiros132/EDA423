@@ -73,33 +73,25 @@ int get_type(unsigned char buffer[8]) {
   return -1;
 }
 
+signed char get_buffer_char_at(unsigned char buffer[8], int index) {
+  return (signed char)buffer[index];
+}
+
 short get_buffer_short_at(unsigned char buffer[8], int index) {
-  if (index < 0 || index > 6) {
-    return -1;
-  }
-
-  char char_size = sizeof(unsigned char);
-
   short value = (
-    (buffer[index + 0] << (8 * char_size)) |
-    (buffer[index + 1] << (0 * char_size))
+    (buffer[index + 0] << 8) |
+    (buffer[index + 1] << 0)
   );
 
   return value;
 }
 
 int get_buffer_int_at(unsigned char buffer[8], int index) {
-  if (index < 0 || index > 4) {
-    return -1;
-  }
-
-  char char_size = sizeof(unsigned char);
-
   int value = (
-    (buffer[index + 0] << (24 * char_size)) |
-    (buffer[index + 1] << (16 * char_size)) |
-    (buffer[index + 2] << (8  * char_size)) |
-    (buffer[index + 3] << (0  * char_size))
+    (buffer[index + 0] << 24) |
+    (buffer[index + 1] << 16) |
+    (buffer[index + 2] <<  8) |
+    (buffer[index + 3] <<  0)
   );
 
   return value;
@@ -112,7 +104,7 @@ void can_send_heartbeat(CANService *self, int unused) {
   send_can_message_null(PRIORITY_HEARTBEAT, TYPE_HEARTBEAT);
 
   #if LOG_LEVEL >= 3
-  SCI_WRITE(&sci0, "\nSent heartbeat message.\n");
+  SCI_WRITE(&sci0, "Sent heartbeat message.\n");
   #endif
 }
 
@@ -137,7 +129,7 @@ void can_send_conductor_claim(CANService *self, int unused) {
   send_can_message_null(PRIORITY_CONDUCTOR_CLAIM, TYPE_CONDUCTOR_CLAIM);
 
   #if LOG_LEVEL >= 1
-  SCI_WRITE(&sci0, "\nSent conductor claim message.\n");
+  SCI_WRITE(&sci0, "Sent conductor claim message.\n");
   #endif
 }
 
@@ -152,7 +144,7 @@ void can_send_note_to_play(CANService *self, int note) {
   #if LOG_LEVEL >= 3
   char strBuff[10];
   itoa(note, strBuff, 10);
-  SCI_WRITE(&sci0, "\nSent note: ");
+  SCI_WRITE(&sci0, "Sent note: ");
   SCI_WRITE(&sci0, strBuff);
   SCI_WRITECHAR(&sci0, '\n');
   #endif
@@ -162,7 +154,7 @@ void can_send_reset(CANService *self, int unused) {
   send_can_message_null(PRIORITY_CONDUCTOR, TYPE_RESET);
 
   #if LOG_LEVEL >= 2
-  SCI_WRITE(&sci0, "\nSent reset message.\n");
+  SCI_WRITE(&sci0, "Sent reset message.\n");
   #endif
 }
 
@@ -170,7 +162,7 @@ void can_send_play(CANService *self, int unused) {
   send_can_message_null(PRIORITY_CONDUCTOR, TYPE_PLAY);
 
   #if LOG_LEVEL >= 2
-  SCI_WRITE(&sci0, "\nSent play message.\n");
+  SCI_WRITE(&sci0, "Sent play message.\n");
   #endif
 }
 
@@ -178,7 +170,7 @@ void can_send_stop(CANService *self, int unused) {
   send_can_message_null(PRIORITY_CONDUCTOR, TYPE_STOP);
 
   #if LOG_LEVEL >= 2
-  SCI_WRITE(&sci0, "\nSent stop message.\n");
+  SCI_WRITE(&sci0, "Sent stop message.\n");
   #endif
 }
 
@@ -195,7 +187,7 @@ void can_send_set_tempo(CANService *self, int tempo) {
   #if LOG_LEVEL >= 2
   char strBuff[10];
   itoa(tempo, strBuff, 10);
-  SCI_WRITE(&sci0, "\nSent tempo: ");
+  SCI_WRITE(&sci0, "Sent tempo: ");
   SCI_WRITE(&sci0, strBuff);
   SCI_WRITECHAR(&sci0, '\n');
   #endif
@@ -267,12 +259,7 @@ void can_receive_message(CANService *self, int unused) {
 
       // First two bytes are the tempo, the third byte is the key.
       short tempo = get_buffer_short_at(msg.buff, 1);
-      signed char key = (signed char)msg.buff[3];
-
-      if(tempo == -1) {
-        SCI_WRITE(&sci0, "ERROR | Fault when trying to parse the tempo from conductor send state message.\n");
-        return;
-      }
+      signed char key = get_buffer_char_at(msg.buff, 3);
 
       ASYNC(&musicPlayer, set_tempo, tempo);
       ASYNC(&musicPlayer, set_key, key);
@@ -314,7 +301,6 @@ void can_receive_message(CANService *self, int unused) {
 
     if(current_conductor != group) {
       #if LOG_LEVEL >= 1
-      SCI_WRITECHAR(&sci0, '\n');
       SCI_WRITE(&sci0, "ERROR | Received conductor message from wrong conductor, node: ");
       char strBuffer[4];
       itoa(group, strBuffer, 10);
@@ -326,7 +312,6 @@ void can_receive_message(CANService *self, int unused) {
     }
 
     #if LOG_LEVEL >= 2
-    SCI_WRITECHAR(&sci0, '\n');
     SCI_WRITE(&sci0, "INFO | Received conductor message with type: ");
     char strBuffer[10];
     itoa(type, strBuffer, 10);
@@ -354,7 +339,7 @@ void can_receive_message(CANService *self, int unused) {
         ASYNC(&musicPlayer, set_tempo, tempo);
         break;
       case TYPE_SET_KEY:
-        signed char key = (signed char)msg.buff[1];
+        signed char key = get_buffer_char_at(msg.buff, 1);
         ASYNC(&musicPlayer, set_key, key);
         break;
       default:
