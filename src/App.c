@@ -3,20 +3,19 @@
 #include "TinyTimber.h"
 #include "canTinyTimber.h"
 #include "sciTinyTimber.h"
-#include "CANHelper.h"
-#include "Conductor.h"
 #include "Definitions.h"
 #include "Database.h"
 #include "MusicPlayer.h"
 #include "SoundPlayer.h"
+#include "CANService.h"
 #include <stdlib.h>
 #include <math.h>
-#include <stdio.h>
 
 extern App app;
 extern MusicPlayer musicPlayer;
 extern SoundPlayer soundPlayer;
 extern Database database;
+extern CANService canService;
 
 extern Can can0;
 extern Serial sci0;
@@ -38,10 +37,20 @@ void start_failure_mode(App *self, int unused) {
   self->silent_failure = true;
 
   reset_board(self, 0);
+
+  #if LOG_LEVEL >= 1
+  SCI_WRITE(&sci0, "Entered silent failure mode.\n");
+  #endif
 }
 
 void stop_failure_mode(App *self, int unused) {
   self->silent_failure = false;
+
+  heartbeat_tick(self, 0);
+
+  #if LOG_LEVEL >= 1
+  SCI_WRITE(&sci0, "Exited silent failure mode.\n");
+  #endif
 }
 
 void reset_board(App *self, int unused) {
@@ -68,10 +77,18 @@ void finish_input(App *self, int unused) {
 }
 
 void heartbeat_tick(App *self, int unused) {
-  if (self->silent_failure) {
-    SCI_WRITE(&sci0, "ERROR | We are in the silent failure mode.\n");
-    return;
+  if (self->heartbeat_msg != NULL) {
+    ABORT(self->heartbeat_msg);
+    self->heartbeat_msg = NULL;
 
+    #if LOG_LEVEL >= 1
+    SCI_WRITE(&sci0, "ERROR | Duplicate heartbeat message. Aborting the last one.\n");
+    #endif
+  }
+
+  if (self->silent_failure) {
+    SCI_WRITE(&sci0, "ERROR | Heartbeat message can't be sent, we are in the silent failure mode.\n");
+    return;
   }
 
   // Send the heartbeat to ourselves as well.
@@ -79,15 +96,16 @@ void heartbeat_tick(App *self, int unused) {
 
   // Send a heartbeat message every 200ms.
   if(self->mode == MUSICIAN_MODE) {
-    send_can_message_null(PRIORITY_HEARTBEAT, TYPE_HEARTBEAT);
+    SYNC(&canService, can_send_heartbeat, 0);
   } else if (self->mode == CONDUCTOR_MODE) {
     int tempo = SYNC(&musicPlayer, get_tempo, 0);
     int key = SYNC(&musicPlayer, get_key, 0);
 
-    conductor_send_state(tempo, key);
+    int args = can_send_conductor_state_pack(tempo, key);
+    SYNC(&canService, can_send_conductor_state, args);
   }
 
-  SEND(MSEC(200), MAX_LAG_DEADLINE, self, heartbeat_tick, 0);
+  self->heartbeat_msg = SEND(MSEC(200), MAX_LAG_DEADLINE, self, heartbeat_tick, 0);
 }
 
 void print_debug_info(App *self, int unused) {
@@ -95,7 +113,7 @@ void print_debug_info(App *self, int unused) {
     int tempo = SYNC(&musicPlayer, get_tempo, 0);
 
     char strBuffer[4];
-    sprintf(strBuffer, "%d", tempo);
+    itoa(tempo, strBuffer, 10);
 
     SCI_WRITECHAR(&sci0, '\n');
     SCI_WRITE(&sci0, "Current tempo: ");
@@ -119,15 +137,7 @@ void clear_input(App *self, int unused) {
 }
 
 void receiver(App *self, int unused) {
-  if(self->silent_failure) {
-    SCI_WRITE(&sci0, "ERROR | We are in the silent failure mode.\n");
-    return;
-  }
-
-  CANMsg msg;
-  CAN_RECEIVE(&can0, &msg);
-
-  receive_can_message(&msg);
+  SYNC(&canService, can_receive_message, 0);
 }
 
 void reader(App *self, int c) {
@@ -141,7 +151,7 @@ void reader(App *self, int c) {
   switch ((char)c)
   {
   case KEY_CLAIM_CONDUCTORSHIP:
-    send_can_message_null(PRIORITY_CONDUCTOR_CLAIM, TYPE_CONDUCTOR_CLAIM);
+    can_send_conductor_claim(&canService, 0);
     break;
   case KEY_SUBMIT:
     SCI_WRITECHAR(&sci0, '\n');
@@ -190,7 +200,7 @@ void reader(App *self, int c) {
     if (self->mode == CONDUCTOR_MODE) {
       int key = self->history[0];
 
-      conductor_send_key(key);
+      SYNC(&canService, can_send_set_key, key);
     }
     break;
   case KEY_SET_TEMPO:
@@ -199,24 +209,24 @@ void reader(App *self, int c) {
     if (self->mode == CONDUCTOR_MODE) {
       int tempo = self->history[0];
 
-      conductor_send_tempo(tempo);
+      SYNC(&canService, can_send_set_tempo, tempo);
     }
     break;
   case KEY_MUSIC_STOP:
     if (self->mode == CONDUCTOR_MODE) {
-      conductor_send_stop();
+      SYNC(&canService, can_send_stop, 0);
     }
     break;
   case KEY_MUSIC_PLAY:
   case KEY_MUSIC_PLAY_2:
     if (self->mode == CONDUCTOR_MODE) {
-      conductor_send_play();
+      SYNC(&canService, can_send_play, 0);
     }
     break;
   case KEY_MUSIC_RESTART:
     if(self->mode == CONDUCTOR_MODE) {
-      conductor_send_stop();
-      conductor_send_play();
+      SYNC(&canService, can_send_stop, 0);
+      SYNC(&canService, can_send_play, 0);
     }
     break;
   case KEY_TOGGLE_DEBUG_PRINTING:
@@ -231,14 +241,20 @@ void reader(App *self, int c) {
     break;
   case KEY_CONDUCTOR_RESET:
     if (self->mode == CONDUCTOR_MODE) {
-      conductor_send_reset();
+      SYNC(&canService, can_send_reset, 0);
     }
     break;
   case KEY_FAILURE_1:
-    self->silent_failure = !self->silent_failure;
+    if(self->silent_failure) {
+      stop_failure_mode(self, 0);
+    } else {
+      start_failure_mode(self, 0);
+    }
     break;
   case KEY_FAILURE_2:
-
+    if(self->silent_failure != true) {
+      start_failure_mode(self, 0);
+    }
     break;
   case '-':
     if (self->bufferLength != 0)

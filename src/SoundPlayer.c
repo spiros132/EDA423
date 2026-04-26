@@ -6,7 +6,6 @@
 #include "sciTinyTimber.h"
 #include <stdlib.h>
 #include <math.h>
-#include <stdio.h>
 
 extern MusicPlayer musicPlayer;
 
@@ -98,7 +97,7 @@ void soundplayer_set_volume(SoundPlayer *self, int value) {
   #if LOG_LEVEL >= 2
   // Maximum characters are three, since volume can be between 0 and 20, and also null terminator.
   char strBuffer[3];
-  sprintf(strBuffer, "%d", value);
+  itoa(value, strBuffer, 10);
 
   SCI_WRITECHAR(&sci0, '\n');
   SCI_WRITE(&sci0, "INFO | Volume set: ");

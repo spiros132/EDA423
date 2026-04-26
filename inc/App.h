@@ -23,6 +23,8 @@ typedef struct {
   int silent_failure;
 
   Msg debug_msg;
+
+  Msg heartbeat_msg;
 } App;
 
 
@@ -42,6 +44,8 @@ typedef struct {
   /* Silent Failure */ \
   false, \
   /* Debug Msg */ \
+  NULL, \
+  /* Heartbeat Msg */ \
   NULL \
 }
 
@@ -92,6 +96,12 @@ void start_failure_mode(App *, int);
 /// @param App The app object.
 /// @param int Unused parameter.
 void stop_failure_mode(App *, int);
+
+/// @brief Gets if we are in failure mode or not.
+/// @param App The app object.
+/// @param int Unused parameter.
+/// @return 1 if we are in failure mode, 0 otherwise.
+int get_failure_mode(App *, int);
 
 /// @brief Resets the board. Should be used when we have failed somehow.
 /// @param App The app object.
