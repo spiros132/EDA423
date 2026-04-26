@@ -3,9 +3,9 @@
 #include "canTinyTimber.h"
 #include "sciTinyTimber.h"
 #include "Definitions.h"
-#include "Conductor.h"
 #include "App.h"
 #include "Database.h"
+#include "CANService.h"
 #include <stdlib.h>
 #include <math.h>
 
@@ -13,6 +13,7 @@ extern App app;
 extern SoundPlayer soundPlayer;
 extern Serial sci0;
 extern Database database;
+extern CANService canService;
 
 // HELPER FUNCTIONS
 
@@ -198,7 +199,7 @@ void next_note(MusicPlayer *self, int unused)
 
   // If we are the conductor, we should also send a message to the musicians with which current node we are playing.
   if (mode == CONDUCTOR_MODE) {
-    conductor_send_note_to_play(self->index);
+    SYNC(&canService, can_send_conductor_state, can_send_conductor_state_pack(self->tempo, self->key));
   }
 }
 
