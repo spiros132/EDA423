@@ -2,7 +2,7 @@
 #include "TinyTimber.h"
 #include "Definitions.h"
 #include "sciTinyTimber.h"
-#include "stdio.h"
+#include "stdlib.h"
 #include "App.h"
 
 extern App app;
@@ -187,7 +187,7 @@ void check_conductor_claim(Database *self, int unused) {
 
       #if LOG_LEVEL >= 1
       char strBuffer[2];
-      sprintf(strBuffer, "%d", i);
+      itoa(i, strBuffer, 10);
 
       SCI_WRITECHAR(&sci0, '\n');
       SCI_WRITE(&sci0, "Chosen new conductor: ");
