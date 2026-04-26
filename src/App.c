@@ -254,6 +254,9 @@ void reader(App *self, int c) {
   case KEY_FAILURE_2:
     if(self->silent_failure != true) {
       start_failure_mode(self, 0);
+
+      int time_to_wait = (CURRENT_OFFSET() % 5) + 6; // Random time between 6 and 10 seconds.
+      SEND(SEC(time_to_wait), MAX_LAG_DEADLINE, self, stop_failure_mode, 0);
     }
     break;
   case '-':
@@ -284,12 +287,6 @@ void startApp(App *self, int arg) {
   SCI_WRITE(&sci0, "Enter integer: \n");
 
   heartbeat_tick(self, 0);
-
-  // Check for other conductors.
-  //int current_time = CURRENT_OFFSET();
-
-  //SEND(MSEC(200), MAX_LAG_DEADLINE, &database, check_heartbeat_7, current_time);
-  //SEND(MSEC(200), MAX_LAG_DEADLINE, &database, check_heartbeat_8, current_time);
 }
 
 int main() {
