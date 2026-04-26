@@ -112,6 +112,53 @@ void print_debug_info(App *self, int unused) {
   self->debug_msg = SEND(PRINT_DEBUG_INFO_PERIOD, MAX_LAG_DEADLINE, self, print_debug_info, 0);
 }
 
+void print_memberships() {
+  int active_boards = SYNC(&database, get_active_boards, 0);
+  int current_conductor = SYNC(&database, get_current_conductor, 0);
+
+  char strBuffer[2];
+  itoa(active_boards, strBuffer, 10);
+
+  SCI_WRITECHAR(&sci0, '\n');
+  SCI_WRITE(&sci0, "Active boards: ");
+  SCI_WRITE(&sci0, strBuffer);
+  SCI_WRITECHAR(&sci0, '\n');
+
+  for (int i = 0; i < 3; i++) {
+    int heartbeat = SYNC(&database, get_heartbeat, i);
+
+    SCI_WRITE(&sci0, "Group ");
+    switch (i) {
+      case GROUP_7:
+        SCI_WRITE(&sci0, " 7");
+        break;
+      case GROUP_8:
+        SCI_WRITE(&sci0, " 8");
+        break;
+      case GROUP_13:
+        SCI_WRITE(&sci0, "13");
+        break;
+      default:
+        SCI_WRITE(&sci0, "unknown");
+    }
+
+    SCI_WRITE(&sci0, " - Heartbeat: ");
+    if (heartbeat == 1) {
+      SCI_WRITE(&sci0, "Alive");
+    } else {
+      SCI_WRITE(&sci0, " Dead");
+    }
+
+    if (current_conductor == i) {
+      SCI_WRITE(&sci0, " (Conductor)");
+    } else {
+      SCI_WRITE(&sci0, " (Musician)");
+    }
+
+    SCI_WRITECHAR(&sci0, '\n');
+  }
+}
+
 void clear_input(App *self, int unused) {
   self->bufferLength = 0;
 }
@@ -241,6 +288,9 @@ void reader(App *self, int c) {
       int time_to_wait = (CURRENT_OFFSET() % 5) + 6; // Random time between 6 and 10 seconds.
       SEND(SEC(time_to_wait), MAX_LAG_DEADLINE, self, stop_failure_mode, 0);
     }
+    break;
+  case KEY_PRINT_MEMBERSHIPS:
+    print_memberships();
     break;
   case '-':
     if (self->bufferLength != 0)

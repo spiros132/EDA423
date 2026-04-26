@@ -102,6 +102,7 @@
 /// @brief The key for conductorship claim.
 #define KEY_CLAIM_CONDUCTORSHIP 'y'
 
+#define KEY_PRINT_MEMBERSHIPS 'm'
 
 /* Failure Definitions */
 
