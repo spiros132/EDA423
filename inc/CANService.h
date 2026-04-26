@@ -1,0 +1,96 @@
+#ifndef _CAN_SERVICE_H
+#define _CAN_SERVICE_H
+
+#include "TinyTimber.h"
+#include "canTinyTimber.h"
+
+
+typedef struct {
+  Object super;
+
+  int is_silent;
+} CANService;
+
+
+#define initCANService() \
+{ \
+  initObject(), \
+  /* is_silent */ \
+  false \
+}
+
+/// @brief A function to send the heartbeat message to the other boards.
+/// @param CANService The CANService object.
+/// @param int Unused parameter.
+void can_send_heartbeat(CANService *, int);
+
+
+/// @brief A function to send the conductor state (tempo and key) to the other boards.
+/// @param tempo The tempo to pack.
+/// @param key The key to pack.
+/// @return The packed arguments as an int.
+static inline int can_send_conductor_state_pack(short tempo, char key) {
+  return (int)((tempo << 8) | key);
+}
+/// @brief A function to unpack the tempo from the arguments of the `can_send_conductor_state` function.
+/// @param args The arguments packed as an int.
+/// @return The unpacked tempo as a short.
+static inline short can_send_conductor_state_unpack_tempo(int args) {
+  return (short)((args >> 8) & 0xFFFF);
+}
+/// @brief A function to unpack the key from the arguments of the `can_send_conductor_state` function.
+/// @param args The arguments packed as an int.
+/// @return The unpacked key as a char.
+static inline char can_send_conductor_state_unpack_key(int args) {
+  return (char)(args & 0xFF);
+}
+
+/// @brief Sends the state of the conductor to the other boards.
+/// @param CANService The CANService object.
+/// @param int The arguments packed as an int. Use the `can_send_conductor_state_pack` function to pack the arguments into an integer.
+void can_send_conductor_state(CANService *, int);
+
+
+/// @brief Sends a conductor claim message to the other boards.
+/// @param CANService The CANService object.
+/// @param int Unused parameter.
+void can_send_conductor_claim(CANService *, int);
+
+/// @brief Sends the note to play, the index of the melody, to the other boards.
+/// @param CANService The CANService object.
+/// @param int The index of the note to play.
+void can_send_note_to_play(CANService *, int);
+
+/// @brief Sends a reset message to the other boards.
+/// @param CANService The CANService object.
+/// @param int Unused parameter.
+void can_send_reset(CANService *, int);
+
+/// @brief Sends a play message to the other boards.
+/// @param CANService The CANService object.
+/// @param int Unused parameter.
+void can_send_play(CANService *, int);
+
+/// @brief Sends a stop message to the other boards.
+/// @param CANService The CANService object.
+/// @param int Unused parameter.
+void can_send_stop(CANService *, int);
+
+/// @brief Sends a set tempo message to the other boards.
+/// @param CANService The CANService object.
+/// @param int The new tempo to set. This parameter should have the size of a short.
+void can_send_set_tempo(CANService *, int);
+
+/// @brief Sends a set key message to the other boards.
+/// @param CANService The CANService object.
+/// @param int The new key to set. This parameter should have the size of a char.
+void can_send_set_key(CANService *, int);
+
+
+/// @brief A function to receive a CAN message from the CAN bus and handle it accordingly.
+/// @param CANService The CANService object.
+/// @param int Unused parameter.
+void can_receive_message(CANService *, int);
+
+
+#endif
