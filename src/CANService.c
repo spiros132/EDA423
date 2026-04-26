@@ -44,7 +44,7 @@ void send_can_message(CANService *self, unsigned char msgId, unsigned char buffe
 
   self->bus_can_missing = CAN_SEND(&can0, &msg);
 
-  //receive_can_message(&msg);
+  //can_receive_message(self, 0);
 
   #if LOG_LEVEL >= 3
   SCI_WRITECHAR(&sci0, '\n');
