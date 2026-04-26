@@ -329,10 +329,10 @@ void can_receive_message(CANService *self, int unused) {
         ASYNC(&musicPlayer, set_key, 0);
         break;
       case TYPE_PLAY:
-        ASYNC(&musicPlayer, play_music, 0);
+        ASYNC(&musicPlayer, start_playing, 0);
         break;
       case TYPE_STOP:
-        ASYNC(&musicPlayer, stop_music, 0);
+        ASYNC(&musicPlayer, stop_playing, 0);
         break;
       case TYPE_SET_TEMPO:
         short tempo = get_buffer_short_at(msg.buff, 1);

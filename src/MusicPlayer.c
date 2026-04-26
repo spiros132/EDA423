@@ -89,47 +89,47 @@ void set_index(MusicPlayer *self, int index)
 
 
 /* Plays the tone */
-void play_music(MusicPlayer *self, int unused)
+void start_playing(MusicPlayer *self, int unused)
 {
-  if (!self->playing) {
-    self->playing = true;
-
-    // Call the next_note function
-    self->next_note_msg = ASYNC(self, next_note, 0);
+  if (!is_playing(self, 0)) {
+    // Call the next_note function which starts the loop
+    self->next_note_msg = BEFORE(MAX_LAG_DEADLINE, self, next_note, 0);
   }
 }
 
 // Stops the music completely, next time you play it starts from the start.
-void stop_music(MusicPlayer *self, int unused)
+void stop_playing(MusicPlayer *self, int unused)
 {
-  pause_music(self, unused);
+  pause_playing(self, unused);
   set_index(self, 0);
 }
 
 // Pauses the music, it continues from where it's left off
-void pause_music(MusicPlayer *self, int unused)
+void pause_playing(MusicPlayer *self, int unused)
 {
-  if (self->playing) {
+  if (is_playing(self, 0)) {
     abort_msg(self, 0);
 
-    self->playing = false;
     SYNC(&soundPlayer, soundplayer_set_playing, false);
   }
 }
 
 // Toggle music between play / pause
-void toggle_music(MusicPlayer *self, int unused)
+void toggle_playing(MusicPlayer *self, int unused)
 {
-  int playing = self->playing;
-
-  if (playing)
+  if (is_playing(self, 0))
   {
-    pause_music(self, unused);
+    pause_playing(self, unused);
   }
   else
   {
-    play_music(self, unused);
+    start_playing(self, unused);
   }
+}
+
+int is_playing(MusicPlayer *self, int unused)
+{
+  return self->next_note_msg != NULL || self->finish_note_msg != NULL;
 }
 
 void abort_msg(MusicPlayer *self, int unused)
@@ -160,10 +160,10 @@ void next_note(MusicPlayer *self, int unused)
 
   // Check if there are any active boards at all.
   if (active_boards == 0) {
-    SCI_WRITE(&sci0, "\nNo active boards found. Stop playing.\n");
+    SCI_WRITE(&sci0, "No active boards found. Stop playing.\n");
 
     // Reset the states
-    self->playing = false;
+    stop_playing(self, 0);
     SYNC(&soundPlayer, soundplayer_set_playing, false);
 
     return;
@@ -214,18 +214,10 @@ void finish_note(MusicPlayer *self, int unused)
 
 void musicplayer_reset_board(MusicPlayer *self, int unused)
 {
-  if (self->next_note_msg != NULL) {
-    ABORT(self->next_note_msg);
-    self->next_note_msg = NULL;
-  }
-
-  if (self->finish_note_msg != NULL) {
-    ABORT(self->finish_note_msg);
-    self->finish_note_msg = NULL;
-  }
+  abort_msg(self, 0);
+  stop_playing(self, 0);
 
   self->index = 0;
-  self->playing = false;
   self->tempo = 120;
   self->key = 0;
 

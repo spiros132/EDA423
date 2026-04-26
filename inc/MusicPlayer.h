@@ -16,7 +16,6 @@ typedef struct {
   int index;
   int tempo;
   int key;
-  int playing;
 
   Msg next_note_msg;
   Msg finish_note_msg;
@@ -30,31 +29,35 @@ typedef struct {
   0, \
   120, \
   0, \
-  0, \
   NULL, \
   NULL \
 }
 
-
 /// @brief Start playing the music.
 /// @param MusicPlayer The MusicPlayer object.
 /// @param int Unused parameter.
-void play_music(MusicPlayer *, int);
-
-/// @brief Stop playing the music and reset the index to 0.
-/// @param MusicPlayer The MusicPlayer object.
-/// @param int Unused parameter.
-void stop_music(MusicPlayer *, int);
+void start_playing(MusicPlayer *, int);
 
 /// @brief Pauses the music without resetting the index.
 /// @param MusicPlayer The MusicPlayer object.
 /// @param int Unused parameter.
-void pause_music(MusicPlayer *, int);
+void pause_playing(MusicPlayer *, int);
+
+/// @brief Stops playing the music and reset the index to 0.
+/// @param MusicPlayer The MusicPlayer object.
+/// @param int Unused parameter.
+void stop_playing(MusicPlayer *, int);
 
 /// @brief Toggles the play/pause state of the music player.
 /// @param MusicPlayer The MusicPlayer object.
 /// @param int Unused parameter.
-void toggle_music(MusicPlayer *, int);
+void toggle_playing(MusicPlayer *, int);
+
+/// @brief Checks if the music player is currently playing.
+/// @param MusicPlayer The MusicPlayer object.
+/// @param int Unused parameter.
+/// @return 1 if playing, 0 otherwise.
+int is_playing(MusicPlayer *, int);
 
 
 /// @brief Aborts all the messages that are currently pending.
