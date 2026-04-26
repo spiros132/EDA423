@@ -34,7 +34,7 @@ void set_mode(App *self, int mode) {
 }
 
 void start_failure_mode(App *self, int unused) {
-  self->silent_failure = true;
+  SYNC(&canService, can_set_force_silent, true);
 
   reset_board(self, 0);
 
@@ -44,7 +44,7 @@ void start_failure_mode(App *self, int unused) {
 }
 
 void stop_failure_mode(App *self, int unused) {
-  self->silent_failure = false;
+  SYNC(&canService, can_set_force_silent, false);
 
   heartbeat_tick(self, 0);
 
@@ -132,6 +132,7 @@ void reader(App *self, int c) {
    * See README for use cases.
    */
 
+  int force_silent = SYNC(&canService, can_get_force_silent, 0);
   self->buffer[self->bufferLength] = (char)c;
 
   switch ((char)c)
@@ -231,14 +232,14 @@ void reader(App *self, int c) {
     }
     break;
   case KEY_FAILURE_1:
-    if(self->silent_failure) {
+    if(force_silent) {
       stop_failure_mode(self, 0);
     } else {
       start_failure_mode(self, 0);
     }
     break;
   case KEY_FAILURE_2:
-    if(self->silent_failure != true) {
+    if(!force_silent) {
       start_failure_mode(self, 0);
 
       int time_to_wait = (CURRENT_OFFSET() % 5) + 6; // Random time between 6 and 10 seconds.

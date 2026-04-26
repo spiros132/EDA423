@@ -20,8 +20,6 @@ typedef struct {
   /// @brief The mode of the board. Can be either conductor or musician mode.
   int mode;
 
-  int silent_failure;
-
   Msg debug_msg;
 
   Msg heartbeat_msg;
@@ -41,8 +39,6 @@ typedef struct {
   0, \
   /* Operation Mode */ \
   MUSICIAN_MODE, \
-  /* Silent Failure */ \
-  false, \
   /* Debug Msg */ \
   NULL, \
   /* Heartbeat Msg */ \
@@ -87,21 +83,6 @@ void set_mode(App *, int);
 /// @return The mode of the board.
 int get_mode(App *, int);
 
-/// @brief Starts the failure mode, the board will not be able to send or receive any CAN messages.
-/// @param App The app object.
-/// @param int Unused parameter.
-void start_failure_mode(App *, int);
-
-/// @brief Stops the failure mode.
-/// @param App The app object.
-/// @param int Unused parameter.
-void stop_failure_mode(App *, int);
-
-/// @brief Gets if we are in failure mode or not.
-/// @param App The app object.
-/// @param int Unused parameter.
-/// @return 1 if we are in failure mode, 0 otherwise.
-int get_failure_mode(App *, int);
 
 /// @brief Resets the board. Should be used when we have failed somehow.
 /// @param App The app object.
