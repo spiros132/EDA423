@@ -5,20 +5,14 @@
 #include "Definitions.h"
 #include <stdbool.h>
 
-#define BUFFERLENGTH 10
-
-
 
 typedef struct {
   Object super;
 
-  char buffer[BUFFERLENGTH];
+  char buffer[10];
   int bufferLength;
   int history[3];
   int historyLength;
-
-  /// @brief The mode of the board. Can be either conductor or musician mode.
-  int mode;
 
   Msg debug_msg;
 
@@ -37,8 +31,6 @@ typedef struct {
   {0, 0, 0}, \
   /* History Length */ \
   0, \
-  /* Operation Mode */ \
-  MUSICIAN_MODE, \
   /* Debug Msg */ \
   NULL, \
   /* Heartbeat Msg */ \
@@ -70,18 +62,6 @@ void heartbeat_tick(App *, int);
 /// @param App The app object.
 /// @param int Unused parameter.
 void print_debug_info(App *, int);
-
-
-/// @brief Getter for the mode of the board.
-/// @param App The app object.
-/// @param int The new mode to set for the board.
-void set_mode(App *, int);
-
-/// @brief Getter for the mode of the board.
-/// @param App The app object.
-/// @param int Unused parameter.
-/// @return The mode of the board.
-int get_mode(App *, int);
 
 
 /// @brief Resets the board. Should be used when we have failed somehow.

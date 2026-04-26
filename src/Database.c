@@ -104,6 +104,14 @@ int get_active_boards(Database *self, int unused) {
   return active_boards;
 }
 
+int get_mode(Database *self, int unused) {
+  if(self->current_conductor == GROUP_13) {
+    return CONDUCTOR_MODE;
+  }
+
+  return MUSICIAN_MODE;
+}
+
 void check_heartbeat_7(Database *self, int last_heartbeat_time) {
   update_heartbeat_off(self, GROUP_7);
 
@@ -172,8 +180,6 @@ void check_heartbeat_13(Database *self, int last_heartbeat_time) {
     #if LOG_LEVEL >= 1
     SCI_WRITE(&sci0, "\nResetting conductor state. Most probably a fault with our heartbeat / CAN system.\n");
     #endif
-
-    SYNC(&app, set_mode, MUSICIAN_MODE);
   }
 }
 
@@ -195,15 +201,11 @@ void check_conductor_claim(Database *self, int unused) {
       SCI_WRITECHAR(&sci0, '\n');
       #endif
 
-      int mode = SYNC(&app, get_mode, 0);
+      int mode = get_mode(self, 0);
 
       if (i == GROUP_13) {
-        SYNC(&app, set_mode, CONDUCTOR_MODE);
-
         SCI_WRITE(&sci0, "\nClaimed Conductorship\n");
       } else if(mode == CONDUCTOR_MODE) {
-        SYNC(&app, set_mode, MUSICIAN_MODE);
-
         SCI_WRITE(&sci0, "\nConductorship Void\n");
       }
 

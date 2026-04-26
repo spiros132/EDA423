@@ -155,7 +155,6 @@ void next_note(MusicPlayer *self, int unused)
   // Check if we are just musician or conductor as well.
   // Check if we are supposed to be playing this.
 
-  int mode = SYNC(&app, get_mode, 0);
   int active_boards = SYNC(&database, get_active_boards, 0);
 
   // Check if there are any active boards at all.
@@ -194,8 +193,9 @@ void next_note(MusicPlayer *self, int unused)
 
   // Schedule the finish_note function
   self->finish_note_msg = SEND(MSEC(mspb), MAX_LAG_DEADLINE, self, finish_note, 0);
-
   self->index = (self->index + 1) % NOTES_AMOUNT;
+
+  int mode = SYNC(&database, get_mode, 0);
 
   // If we are the conductor, we should also send a message to the musicians with which current node we are playing.
   if (mode == CONDUCTOR_MODE) {

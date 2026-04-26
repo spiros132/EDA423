@@ -25,14 +25,6 @@ int x(int k) {
   return k - (-10);
 }
 
-int get_mode(App *self, int unused) {
-  return self->mode;
-}
-
-void set_mode(App *self, int mode) {
-  self->mode = mode;
-}
-
 void start_failure_mode(App *self, int unused) {
   SYNC(&canService, can_set_force_silent, true);
 
@@ -54,8 +46,6 @@ void stop_failure_mode(App *self, int unused) {
 }
 
 void reset_board(App *self, int unused) {
-  self->mode = MUSICIAN_MODE;
-
   BEFORE(MAX_LAG_DEADLINE, &database, database_reset_board, 0);
   BEFORE(MAX_LAG_DEADLINE, &musicPlayer, musicplayer_reset_board, 0);
   BEFORE(MAX_LAG_DEADLINE, &soundPlayer, soundplayer_reset_board, 0);
@@ -80,10 +70,12 @@ void heartbeat_tick(App *self, int unused) {
   // Send the heartbeat to ourselves as well.
   BEFORE(MAX_LAG_DEADLINE, &database, update_last_heartbeat, GROUP_13);
 
+  int mode = SYNC(&database, get_mode, 0);
+
   // Send a heartbeat message every 200ms.
-  if(self->mode == MUSICIAN_MODE) {
+  if(mode == MUSICIAN_MODE) {
     SYNC(&canService, can_send_heartbeat, 0);
-  } else if (self->mode == CONDUCTOR_MODE) {
+  } else if (mode == CONDUCTOR_MODE) {
     int tempo = SYNC(&musicPlayer, get_tempo, 0);
     int key = SYNC(&musicPlayer, get_key, 0);
 
@@ -95,7 +87,9 @@ void heartbeat_tick(App *self, int unused) {
 }
 
 void print_debug_info(App *self, int unused) {
-  if(self->mode == CONDUCTOR_MODE) {
+  int mode = SYNC(&database, get_mode, 0);
+
+  if(mode == CONDUCTOR_MODE) {
     int tempo = SYNC(&musicPlayer, get_tempo, 0);
 
     char strBuffer[4];
@@ -105,7 +99,7 @@ void print_debug_info(App *self, int unused) {
     SCI_WRITE(&sci0, "Current tempo: ");
     SCI_WRITE(&sci0, strBuffer);
     SCI_WRITECHAR(&sci0, '\n');
-  } else if(self->mode == MUSICIAN_MODE) {
+  } else if(mode == MUSICIAN_MODE) {
     // Get if the board is muted or not.
     int muted = SYNC(&soundPlayer, soundplayer_get_muted, 0);
     if (muted)  {
@@ -133,6 +127,8 @@ void reader(App *self, int c) {
    */
 
   int force_silent = SYNC(&canService, can_get_force_silent, 0);
+  int mode = SYNC(&database, get_mode, 0);
+
   self->buffer[self->bufferLength] = (char)c;
 
   switch ((char)c)
@@ -146,7 +142,7 @@ void reader(App *self, int c) {
     /* Finish the digit/number */
     finish_input(self, 0);
 
-    char strBuffer[BUFFERLENGTH];
+    char strBuffer[10];
     itoa(self->history[0], strBuffer, 10);
 
     SCI_WRITE(&sci0, "Entered integer: ");
@@ -184,7 +180,7 @@ void reader(App *self, int c) {
   case KEY_SET_KEY:
     finish_input(self, 0);
 
-    if (self->mode == CONDUCTOR_MODE) {
+    if (mode == CONDUCTOR_MODE) {
       int key = self->history[0];
 
       SYNC(&canService, can_send_set_key, key);
@@ -193,25 +189,25 @@ void reader(App *self, int c) {
   case KEY_SET_TEMPO:
     finish_input(self, 0);
 
-    if (self->mode == CONDUCTOR_MODE) {
+    if (mode == CONDUCTOR_MODE) {
       int tempo = self->history[0];
 
       SYNC(&canService, can_send_set_tempo, tempo);
     }
     break;
   case KEY_MUSIC_STOP:
-    if (self->mode == CONDUCTOR_MODE) {
+    if (mode == CONDUCTOR_MODE) {
       SYNC(&canService, can_send_stop, 0);
     }
     break;
   case KEY_MUSIC_PLAY:
   case KEY_MUSIC_PLAY_2:
-    if (self->mode == CONDUCTOR_MODE) {
+    if (mode == CONDUCTOR_MODE) {
       SYNC(&canService, can_send_play, 0);
     }
     break;
   case KEY_MUSIC_RESTART:
-    if(self->mode == CONDUCTOR_MODE) {
+    if(mode == CONDUCTOR_MODE) {
       SYNC(&canService, can_send_stop, 0);
       SYNC(&canService, can_send_play, 0);
     }
@@ -227,7 +223,7 @@ void reader(App *self, int c) {
     }
     break;
   case KEY_CONDUCTOR_RESET:
-    if (self->mode == CONDUCTOR_MODE) {
+    if (mode == CONDUCTOR_MODE) {
       SYNC(&canService, can_send_reset, 0);
     }
     break;

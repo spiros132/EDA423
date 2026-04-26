@@ -93,6 +93,12 @@ int get_current_conductor(Database *, int);
 /// @return The amount of active boards.
 int get_active_boards(Database *, int);
 
+/// @brief Getter for the mode of the board.
+/// @param Database The database object.
+/// @param int Unused parameter.
+/// @return The mode of the board.
+int get_mode(Database *, int);
+
 
 /// @brief Check the heartbeat for the group 7. This function should be called with a delay and aborted if we get a heartbeat before the delay is over.
 /// @param Database The database object.
