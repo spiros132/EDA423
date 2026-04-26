@@ -21,7 +21,16 @@ extern Database database;
 
 /* HELPER FUNCTIONS */
 
-void send_can_message(unsigned char msgId, unsigned char buffer[8]) {
+void send_can_message(CANService *self, unsigned char msgId, unsigned char buffer[8]) {
+  // Check if we are in failure mode, either with force silent or if the bus is missing.
+  if(self->force_silent || self->bus_can_missing) {
+    #if LOG_LEVEL >= 1
+    SCI_WRITE(&sci0, "In failure mode, not sending CAN message.\n");
+    #endif
+
+    return;
+  }
+
   CANMsg msg;
 
   msg.nodeId = GROUP_13;
@@ -33,7 +42,7 @@ void send_can_message(unsigned char msgId, unsigned char buffer[8]) {
 
   msg.length = 8;
 
-  CAN_SEND(&can0, &msg);
+  self->bus_can_missing = CAN_SEND(&can0, &msg);
 
   //receive_can_message(&msg);
 
@@ -50,10 +59,10 @@ void send_can_message(unsigned char msgId, unsigned char buffer[8]) {
   #endif
 }
 
-void send_can_message_null(unsigned char priority, unsigned char type) {
+void send_can_message_null(CANService *self, unsigned char priority, unsigned char type) {
   unsigned char buffer[8] = {0};
   buffer[0] = type;
-  send_can_message(priority, buffer);
+  send_can_message(self, priority, buffer);
 }
 
 int get_priority(unsigned char msgID) {
@@ -98,10 +107,21 @@ int get_buffer_int_at(unsigned char buffer[8], int index) {
 }
 
 
+/* FORCE SILENT FUNCTIONALITY */
+
+void can_set_force_silent(CANService *self, int new_value) {
+  self->force_silent = new_value;
+}
+
+int can_get_force_silent(CANService *self, int unused) {
+  return self->force_silent;
+}
+
+
 /* SEND FUNCTIONS */
 
 void can_send_heartbeat(CANService *self, int unused) {
-  send_can_message_null(PRIORITY_HEARTBEAT, TYPE_HEARTBEAT);
+  send_can_message_null(self, PRIORITY_HEARTBEAT, TYPE_HEARTBEAT);
 
   #if LOG_LEVEL >= 3
   SCI_WRITE(&sci0, "Sent heartbeat message.\n");
@@ -122,11 +142,11 @@ void can_send_conductor_state(CANService *self, int args) {
   // One byte for the key.
   buff[3] = key & 0xFF;
 
-  send_can_message(PRIORITY_HEARTBEAT, buff);
+  send_can_message(self, PRIORITY_HEARTBEAT, buff);
 }
 
 void can_send_conductor_claim(CANService *self, int unused) {
-  send_can_message_null(PRIORITY_CONDUCTOR_CLAIM, TYPE_CONDUCTOR_CLAIM);
+  send_can_message_null(self, PRIORITY_CONDUCTOR_CLAIM, TYPE_CONDUCTOR_CLAIM);
 
   #if LOG_LEVEL >= 1
   SCI_WRITE(&sci0, "Sent conductor claim message.\n");
@@ -139,7 +159,7 @@ void can_send_note_to_play(CANService *self, int note) {
   buff[0] = TYPE_NOTE_TO_PLAY;
   buff[1] = note & 0xFF;
 
-  send_can_message(PRIORITY_CONDUCTOR, buff);
+  send_can_message(self, PRIORITY_CONDUCTOR, buff);
 
   #if LOG_LEVEL >= 3
   char strBuff[10];
@@ -151,7 +171,7 @@ void can_send_note_to_play(CANService *self, int note) {
 }
 
 void can_send_reset(CANService *self, int unused) {
-  send_can_message_null(PRIORITY_CONDUCTOR, TYPE_RESET);
+  send_can_message_null(self, PRIORITY_CONDUCTOR, TYPE_RESET);
 
   #if LOG_LEVEL >= 2
   SCI_WRITE(&sci0, "Sent reset message.\n");
@@ -159,7 +179,7 @@ void can_send_reset(CANService *self, int unused) {
 }
 
 void can_send_play(CANService *self, int unused) {
-  send_can_message_null(PRIORITY_CONDUCTOR, TYPE_PLAY);
+  send_can_message_null(self, PRIORITY_CONDUCTOR, TYPE_PLAY);
 
   #if LOG_LEVEL >= 2
   SCI_WRITE(&sci0, "Sent play message.\n");
@@ -167,7 +187,7 @@ void can_send_play(CANService *self, int unused) {
 }
 
 void can_send_stop(CANService *self, int unused) {
-  send_can_message_null(PRIORITY_CONDUCTOR, TYPE_STOP);
+  send_can_message_null(self, PRIORITY_CONDUCTOR, TYPE_STOP);
 
   #if LOG_LEVEL >= 2
   SCI_WRITE(&sci0, "Sent stop message.\n");
@@ -182,7 +202,7 @@ void can_send_set_tempo(CANService *self, int tempo) {
   buff[1] = (tempo >> 8) & 0xFF;
   buff[2] = (tempo >> 0) & 0xFF;
 
-  send_can_message(PRIORITY_CONDUCTOR, buff);
+  send_can_message(self, PRIORITY_CONDUCTOR, buff);
 
   #if LOG_LEVEL >= 2
   char strBuff[10];
@@ -198,7 +218,7 @@ void can_send_set_key(CANService *self, int key) {
   buff[0] = TYPE_SET_KEY;
   buff[1] = key & 0xFF;
 
-  send_can_message(PRIORITY_CONDUCTOR, buff);
+  send_can_message(self, PRIORITY_CONDUCTOR, buff);
 
   #if LOG_LEVEL >= 2
   char strBuff[10];
@@ -210,6 +230,16 @@ void can_send_set_key(CANService *self, int key) {
 }
 
 void can_receive_message(CANService *self, int unused) {
+  if (self->force_silent) {
+    #if LOG_LEVEL >= 1
+    SCI_WRITE(&sci0, "In force silent mode, ignoring received CAN message.\n");
+    #endif
+
+    return;
+  }
+
+  self->bus_can_missing = false;
+
   CANMsg msg;
   CAN_RECEIVE(&can0, &msg);
 

@@ -25,6 +25,18 @@ typedef struct {
   false \
 }
 
+/// @brief Sets the force silent mode of the object. If the force silent mode is enabled, the board will ignore any send or receive CAN requests.
+/// @param CANService The CANService object.
+/// @param int The new value to set the force silent mode to.
+void can_set_force_silent(CANService *, int);
+
+/// @brief Gets the force silent mode of the object.
+/// @param CANService The CANService object.
+/// @param int Unused parameter.
+/// @return The boolean value of the force silent mode.
+int can_get_force_silent(CANService *, int);
+
+
 /// @brief A function to send the heartbeat message to the other boards.
 /// @param CANService The CANService object.
 /// @param int Unused parameter.
