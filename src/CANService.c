@@ -111,7 +111,7 @@ int get_buffer_int_at(unsigned char buffer[8], int index) {
 void can_send_heartbeat(CANService *self, int unused) {
   send_can_message_null(PRIORITY_HEARTBEAT, TYPE_HEARTBEAT);
 
-  #if LOG_LEVEL >= 2
+  #if LOG_LEVEL >= 3
   SCI_WRITE(&sci0, "\nSent heartbeat message.\n");
   #endif
 }
@@ -267,7 +267,7 @@ void can_receive_message(CANService *self, int unused) {
 
       // First two bytes are the tempo, the third byte is the key.
       short tempo = get_buffer_short_at(msg.buff, 1);
-      char key = (char)msg.buff[3];
+      signed char key = (signed char)msg.buff[3];
 
       if(tempo == -1) {
         SCI_WRITE(&sci0, "ERROR | Fault when trying to parse the tempo from conductor send state message.\n");
@@ -342,7 +342,6 @@ void can_receive_message(CANService *self, int unused) {
       case TYPE_RESET:
         ASYNC(&musicPlayer, set_tempo, 120);
         ASYNC(&musicPlayer, set_key, 0);
-
         break;
       case TYPE_PLAY:
         ASYNC(&musicPlayer, play_music, 0);
@@ -355,7 +354,7 @@ void can_receive_message(CANService *self, int unused) {
         ASYNC(&musicPlayer, set_tempo, tempo);
         break;
       case TYPE_SET_KEY:
-        char key = (char)msg.buff[1];
+        signed char key = (signed char)msg.buff[1];
         ASYNC(&musicPlayer, set_key, key);
         break;
       default:
