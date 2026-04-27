@@ -143,6 +143,9 @@ void abort_msg(MusicPlayer *self, int unused)
     ABORT(self->finish_note_msg);
     self->finish_note_msg = NULL;
   }
+
+  // Since we are aborting, close the soundplayer
+  SYNC(&soundPlayer, soundplayer_set_playing, false);
 }
 
 void next_note(MusicPlayer *self, int unused)
