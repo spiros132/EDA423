@@ -47,7 +47,7 @@ void can_send_heartbeat(CANService *, int);
 /// @param tempo The tempo to pack.
 /// @param key The key to pack.
 /// @return The packed arguments as an int.
-static inline int can_send_conductor_state_pack(short tempo, char key) {
+static inline int can_send_conductor_state_pack(short tempo, signed char key) {
   return (int)((tempo << 8) | key);
 }
 /// @brief A function to unpack the tempo from the arguments of the `can_send_conductor_state` function.
@@ -59,8 +59,8 @@ static inline short can_send_conductor_state_unpack_tempo(int args) {
 /// @brief A function to unpack the key from the arguments of the `can_send_conductor_state` function.
 /// @param args The arguments packed as an int.
 /// @return The unpacked key as a char.
-static inline char can_send_conductor_state_unpack_key(int args) {
-  return (char)(args & 0xFF);
+static inline signed char can_send_conductor_state_unpack_key(int args) {
+  return (signed char)(args & 0xFF);
 }
 
 /// @brief Sends the state of the conductor to the other boards.
