@@ -17,8 +17,6 @@ void update_heartbeat_off(Database *self, int group) {
 }
 
 void update_last_heartbeat(Database *self, int group) {
-  int current_time = CURRENT_OFFSET();
-
   // Also call the function that will check in a bit if we have gotten a heartbeat from the other groups.
   switch (group) {
     case GROUP_7:
@@ -27,7 +25,7 @@ void update_last_heartbeat(Database *self, int group) {
         self->check_heartbeat_msgs[GROUP_7] = NULL;
       }
 
-      self->check_heartbeat_msgs[GROUP_7] = SEND(HEARTBEAT_TIMEOUT, MAX_LAG_DEADLINE, self, check_heartbeat_7, current_time);
+      self->check_heartbeat_msgs[GROUP_7] = SEND(HEARTBEAT_TIMEOUT, MAX_LAG_DEADLINE, self, check_heartbeat_7, 0);
       break;
     case GROUP_8:
       if (self->check_heartbeat_msgs[GROUP_8] != NULL) {
@@ -35,7 +33,7 @@ void update_last_heartbeat(Database *self, int group) {
         self->check_heartbeat_msgs[GROUP_8] = NULL;
       }
 
-      self->check_heartbeat_msgs[GROUP_8] = SEND(HEARTBEAT_TIMEOUT, MAX_LAG_DEADLINE, self, check_heartbeat_8, current_time);
+      self->check_heartbeat_msgs[GROUP_8] = SEND(HEARTBEAT_TIMEOUT, MAX_LAG_DEADLINE, self, check_heartbeat_8, 0);
       break;
     case GROUP_13:
       if (self->check_heartbeat_msgs[GROUP_13] != NULL) {
@@ -43,14 +41,13 @@ void update_last_heartbeat(Database *self, int group) {
         self->check_heartbeat_msgs[GROUP_13] = NULL;
       }
 
-      self->check_heartbeat_msgs[GROUP_13] = SEND(HEARTBEAT_TIMEOUT, MAX_LAG_DEADLINE, self, check_heartbeat_13, current_time);
+      self->check_heartbeat_msgs[GROUP_13] = SEND(HEARTBEAT_TIMEOUT, MAX_LAG_DEADLINE, self, check_heartbeat_13, 0);
       break;
     default:
       SCI_WRITE(&sci0, "Invalid group for heartbeat update\n");
       return;
   }
 
-  self->last_heartbeats[group] = current_time;
   update_heartbeat_on(self, group);
 }
 
@@ -80,14 +77,6 @@ int get_heartbeat(Database *self, int group) {
   return self->heartbeats[group];
 }
 
-int get_last_heartbeat(Database *self, int group) {
-  if (group < 0 || group > 2) {
-    return -1;
-  }
-
-  return self->last_heartbeats[group];
-}
-
 int get_current_conductor(Database *self, int unused) {
   return self->current_conductor;
 }
@@ -112,7 +101,7 @@ int get_mode(Database *self, int unused) {
   return MUSICIAN_MODE;
 }
 
-void check_heartbeat_7(Database *self, int last_heartbeat_time) {
+void check_heartbeat_7(Database *self, int unused) {
   update_heartbeat_off(self, GROUP_7);
 
   // Check for silent failure.
@@ -142,7 +131,7 @@ void check_heartbeat_7(Database *self, int last_heartbeat_time) {
   }
 }
 
-void check_heartbeat_8(Database *self, int last_heartbeat_time) {
+void check_heartbeat_8(Database *self, int unused) {
   update_heartbeat_off(self, GROUP_8);
 
   // Check for silent failure.
@@ -170,7 +159,7 @@ void check_heartbeat_8(Database *self, int last_heartbeat_time) {
   }
 }
 
-void check_heartbeat_13(Database *self, int last_heartbeat_time) {
+void check_heartbeat_13(Database *self, int unused) {
   update_heartbeat_off(self, GROUP_13);
 
   // Since we were the conductor, just reset and go back to musician mode.
@@ -223,7 +212,6 @@ void database_reset_board(Database *self, int unused) {
   // Reset all the values to default.
   for (int i = 0; i < 3; i++) {
     self->heartbeats[i] = 0;
-    self->last_heartbeats[i] = 0;
     self->conductor_claims[i] = 0;
 
     if (self->check_heartbeat_msgs[i] != NULL) {
