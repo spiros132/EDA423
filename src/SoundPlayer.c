@@ -73,16 +73,6 @@ void soundplayer_set_playing(SoundPlayer *self, int value) {
 
 void soundplayer_set_period(SoundPlayer *self, int value) {
   self->current_period = value;
-
-  #if LOG_LEVEL >= 3
-  char strBuffer[10];
-  sprintf(strBuffer, "%d", value);
-
-  SCI_WRITECHAR(&sci0, '\n');
-  SCI_WRITE(&sci0, "INFO | Period set: ");
-  SCI_WRITE(&sci0, strBuffer);
-  SCI_WRITECHAR(&sci0, '\n');
-  #endif
 }
 
 void soundplayer_set_volume(SoundPlayer *self, int value) {
