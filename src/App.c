@@ -32,27 +32,25 @@ void start_failure_mode(App *self, int unused) {
 
   SYNC(&canService, stop_heartbeat_message, 0);
 
-  #if LOG_LEVEL >= 1
-  SCI_WRITE(&sci0, "Entered silent failure mode.\n");
-  #endif
+  SCI_WRITE(&sci0, "Silent Failure\n");
 }
 
 void stop_failure_mode(App *self, int unused) {
   SYNC(&canService, can_set_force_silent, false);
-
   SYNC(&canService, can_send_heartbeat, 0);
 
-  // TODO: This won't work since the active_boards are only updated after a while.
+  SEND(HEARTBEAT_TIMEOUT, MAX_LAG_DEADLINE, self, check_active_boards, 0);
+
+  SCI_WRITE(&sci0, "Leave Silent Failure\n");
+}
+
+void check_active_boards(App *self, int unused) {
   // Check if we are alone in the network, if so become the conductor and start playing the melody.
   int active_boards = SYNC(&database, get_active_boards, 0);
   if (active_boards == 1) {
     SYNC(&database, set_current_conductor, GROUP_13);
     ASYNC(&musicPlayer, start_playing, 0);
   }
-
-  #if LOG_LEVEL >= 1
-  SCI_WRITE(&sci0, "Exited silent failure mode.\n");
-  #endif
 }
 
 void reset_board(App *self, int unused) {

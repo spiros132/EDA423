@@ -60,4 +60,9 @@ void print_debug_info(App *, int);
 /// @param int Unused parameter.
 void reset_board(App *, int);
 
+/// @brief Checks active boards to see if we are the only one in the network.
+/// @param App The app object.
+/// @param int Unused parameter.
+void check_active_boards(App *, int);
+
 #endif
