@@ -30,6 +30,10 @@ void start_failure_mode(App *self, int unused) {
 
   reset_board(self, 0);
 
+  if (self->heartbeat_msg != NULL) {
+    ABORT(self->heartbeat_msg);
+  }
+
   #if LOG_LEVEL >= 1
   SCI_WRITE(&sci0, "Entered silent failure mode.\n");
   #endif
@@ -71,9 +75,6 @@ void finish_input(App *self, int unused) {
 }
 
 void heartbeat_tick(App *self, int unused) {
-  // Send the heartbeat to ourselves as well.
-  //BEFORE(MAX_LAG_DEADLINE, &database, update_last_heartbeat, GROUP_13);
-
   int mode = SYNC(&database, get_mode, 0);
 
   // Send a heartbeat message every 200ms.
