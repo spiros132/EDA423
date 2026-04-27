@@ -17,6 +17,14 @@ void update_heartbeat_off(Database *self, int group) {
 }
 
 void update_last_heartbeat(Database *self, int group) {
+  if(group == GROUP_13) {
+    #if LOG_LEVEL >= 2
+    SCI_WRITE(&sci0, "Received heartbeat from ourselves!\n");
+    #endif
+    
+    return;
+  }
+
   // Also call the function that will check in a bit if we have gotten a heartbeat from the other groups.
   switch (group) {
     case GROUP_7:
@@ -34,14 +42,6 @@ void update_last_heartbeat(Database *self, int group) {
       }
 
       self->check_heartbeat_msgs[GROUP_8] = SEND(HEARTBEAT_TIMEOUT, MAX_LAG_DEADLINE, self, check_heartbeat_8, 0);
-      break;
-    case GROUP_13:
-      if (self->check_heartbeat_msgs[GROUP_13] != NULL) {
-        ABORT(self->check_heartbeat_msgs[GROUP_13]);
-        self->check_heartbeat_msgs[GROUP_13] = NULL;
-      }
-
-      self->check_heartbeat_msgs[GROUP_13] = SEND(HEARTBEAT_TIMEOUT, MAX_LAG_DEADLINE, self, check_heartbeat_13, 0);
       break;
     default:
       SCI_WRITE(&sci0, "Invalid group for heartbeat update\n");
@@ -159,19 +159,6 @@ void check_heartbeat_8(Database *self, int unused) {
   }
 }
 
-void check_heartbeat_13(Database *self, int unused) {
-  update_heartbeat_off(self, GROUP_13);
-
-  // Since we were the conductor, just reset and go back to musician mode.
-  if (self->current_conductor == GROUP_13){
-    self->current_conductor = -1;
-
-    #if LOG_LEVEL >= 1
-    SCI_WRITE(&sci0, "\nResetting conductor state. Most probably a fault with our heartbeat / CAN system.\n");
-    #endif
-  }
-}
-
 void check_conductor_claim(Database *self, int unused) {
   self->check_conductor_claim_msg = NULL;
 
@@ -211,7 +198,12 @@ void check_conductor_claim(Database *self, int unused) {
 void database_reset_board(Database *self, int unused) {
   // Reset all the values to default.
   for (int i = 0; i < 3; i++) {
-    self->heartbeats[i] = 0;
+    if (i == GROUP_13) {
+      self->heartbeats[i] = 1;
+    } else {
+      self->heartbeats[i] = 0;
+    }
+    
     self->conductor_claims[i] = 0;
 
     if (self->check_heartbeat_msgs[i] != NULL) {

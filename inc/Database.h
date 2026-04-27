@@ -27,7 +27,7 @@ typedef struct {
 { \
   initObject(), \
   /* Heartbeats */ \
-  {0, 0, 0}, \
+  {0, 0, 1}, \
   /* Current conductor */ \
   -1, \
   /* Conductor claims */ \
@@ -105,10 +105,6 @@ void check_heartbeat_7(Database *, int);
 /// @param int Unused parameter.
 void check_heartbeat_8(Database *, int);
 
-/// @brief Check the heartbeat for the group 13. This function should be called with a delay and aborted if we get a heartbeat before the delay is over.
-/// @param Database The database object.
-/// @param int Unused parameter.
-void check_heartbeat_13(Database *, int);
 
 /// @brief Check which groups have called for a conductor claim and update the current conductor accordingly. If there are multiple claims, the group with the lowest rank gets selected.
 /// @param Database The database object.
