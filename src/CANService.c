@@ -184,6 +184,7 @@ void internal_receive_message(CANMsg *msg) {
       case TYPE_NOTE_TO_PLAY:
         char note = (char)msg->buff[1];
         SYNC(&musicPlayer, set_index, note);
+        SYNC(&musicPlayer, abort_msg, 0);
         SYNC(&musicPlayer, start_playing, 0);
         break;
       case TYPE_RESET:
@@ -229,7 +230,7 @@ void send_can_message(CANService *self, unsigned char msgId, unsigned char buffe
   // Check if we are in failure mode, either with force silent or if the bus is missing.
   if(self->force_silent || self->bus_can_missing) {
     #if LOG_LEVEL >= 1
-    SCI_WRITE(&sci0, "In failure mode, not sending CAN message.\n");
+    SCI_WRITE(&sci0, "In failure mode, skipping send of the CAN message.\n");
     #endif
 
     return;
@@ -405,7 +406,7 @@ void can_receive_message(CANService *self, int unused) {
 
   if (self->force_silent) {
     #if LOG_LEVEL >= 1
-    SCI_WRITE(&sci0, "In force silent mode, ignoring received CAN message.\n");
+    SCI_WRITE(&sci0, "In force silent mode, skipping received CAN message.\n");
     #endif
 
     return;
