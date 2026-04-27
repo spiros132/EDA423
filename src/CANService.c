@@ -4,6 +4,7 @@
 #include "MusicPlayer.h"
 #include "SoundPlayer.h"
 #include "Database.h"
+#include "App.h"
 
 #if LOG_LEVEL >= 1
 // DEBUG MODE
@@ -14,56 +15,13 @@ extern Serial sci0;
 #endif
 
 extern Can can0;
+extern App app;
 extern MusicPlayer musicPlayer;
 extern SoundPlayer soundPlayer;
 extern Database database;
 
 
 /* HELPER FUNCTIONS */
-
-void send_can_message(CANService *self, unsigned char msgId, unsigned char buffer[8]) {
-  // Check if we are in failure mode, either with force silent or if the bus is missing.
-  if(self->force_silent || self->bus_can_missing) {
-    #if LOG_LEVEL >= 1
-    SCI_WRITE(&sci0, "In failure mode, not sending CAN message.\n");
-    #endif
-
-    return;
-  }
-
-  CANMsg msg;
-
-  msg.nodeId = GROUP_13;
-  msg.msgId = msgId;
-
-  for (int i = 0; i < 8; i++) {
-    msg.buff[i] = buffer[i];
-  }
-
-  msg.length = 8;
-
-  self->bus_can_missing = CAN_SEND(&can0, &msg);
-
-  //can_receive_message(self, 0);
-
-  #if LOG_LEVEL >= 3
-  SCI_WRITECHAR(&sci0, '\n');
-  SCI_WRITE(&sci0, "SPAM | Sent CAN message with priority: ");
-  char strBuffer[4];
-  itoa(msgId, strBuffer, 10);
-  SCI_WRITE(&sci0, strBuffer);
-  SCI_WRITE(&sci0, " and type: ");
-  itoa(buffer[0], strBuffer, 10);
-  SCI_WRITE(&sci0, strBuffer);
-  SCI_WRITECHAR(&sci0, '\n');
-  #endif
-}
-
-void send_can_message_null(CANService *self, unsigned char priority, unsigned char type) {
-  unsigned char buffer[8] = {0};
-  buffer[0] = type;
-  send_can_message(self, priority, buffer);
-}
 
 int get_priority(unsigned char msgID) {
   if (msgID == 0 || msgID == 1 || msgID == 7) {
@@ -104,6 +62,217 @@ int get_buffer_int_at(unsigned char buffer[8], int index) {
   );
 
   return value;
+}
+
+void internal_receive_message(CANMsg *msg) {
+  // Since we got a can message, reset the silent failure to false.
+  int group = msg->nodeId;
+  int priority = get_priority(msg->msgId);
+  int type = get_type(msg->buff);
+
+  if(group != GROUP_7 && group != GROUP_8 && group != GROUP_13) {
+    SCI_WRITE(&sci0, "ERROR | Received CAN message with invalid group: ");
+
+    char strBuffer[4];
+    itoa(group, strBuffer, 10);
+    SCI_WRITE(&sci0, strBuffer);
+    SCI_WRITECHAR(&sci0, '\n');
+
+    return;
+  }
+
+  #if LOG_LEVEL >= 3
+  SCI_WRITE(&sci0, "SPAM | Received CAN message with priority: ");
+  char strBuffer[4];
+  itoa(priority, strBuffer, 10);
+  SCI_WRITE(&sci0, strBuffer);
+  SCI_WRITE(&sci0, " and type: ");
+  itoa(type, strBuffer, 10);
+  SCI_WRITE(&sci0, strBuffer);
+  SCI_WRITECHAR(&sci0, '\n');
+  #endif
+
+  if (priority == PRIORITY_HEARTBEAT) {
+    if (type == TYPE_HEARTBEAT) {
+      BEFORE(MAX_LAG_DEADLINE, &database, update_last_heartbeat, group);
+    } else if(type == TYPE_CONDUCTOR_SEND_STATE) {
+      int current_conductor = SYNC(&database, get_current_conductor, 0);
+
+      // If there is no conductor yet, set the conductor to the group of the received message.
+      if (current_conductor == -1) {
+        SYNC(&database, set_current_conductor, group);
+        current_conductor = group;
+      }
+
+      // Check if the conductor is the correct one.
+      if(current_conductor != group) {
+        #if LOG_LEVEL >= 1
+        SCI_WRITECHAR(&sci0, '\n');
+        SCI_WRITE(&sci0, "ERROR | Received conductor send state message from wrong conductor, node: ");
+        char strBuffer[4];
+        itoa(group, strBuffer, 10);
+        SCI_WRITE(&sci0, strBuffer);
+        SCI_WRITECHAR(&sci0, '\n');
+        #endif
+
+        return;
+      }
+
+      // First two bytes are the tempo, the third byte is the key.
+      short tempo = get_buffer_short_at(msg->buff, 1);
+      signed char key = get_buffer_char_at(msg->buff, 3);
+
+      ASYNC(&musicPlayer, set_tempo, tempo);
+      ASYNC(&musicPlayer, set_key, key);
+
+      // Update the heartbeat for the conductor.
+      BEFORE(MAX_LAG_DEADLINE, &database, update_last_heartbeat, group);
+    } else {
+      SCI_WRITE(&sci0, "ERROR | CONDUCTOR SEND STATE | Received type: ");
+
+      // Char can only be maximum three characters long + null terminator.
+      char strBuffer[4];
+      itoa(type, strBuffer, 10);
+      SCI_WRITE(&sci0, strBuffer);
+      SCI_WRITECHAR(&sci0, '\n');
+    }
+  } else if (priority == PRIORITY_CONDUCTOR_CLAIM) {
+    if (type == TYPE_CONDUCTOR_CLAIM) {
+      SYNC(&database, update_current_conductor, group);
+    } else {
+      SCI_WRITE(&sci0, "ERROR | CONDUCTOR CLAIM | Received type: ");
+
+      // Char can only be maximum three characters long + null terminator.
+      char strBuffer[10];
+      itoa(type, strBuffer, 10);
+      SCI_WRITE(&sci0, strBuffer);
+      SCI_WRITECHAR(&sci0, '\n');
+    }
+  } else if (priority == PRIORITY_CONDUCTOR) {
+    // Conductor message.
+    int current_conductor = SYNC(&database, get_current_conductor, 0);
+
+    if(current_conductor == -1) {
+      #if LOG_LEVEL >= 1
+      SCI_WRITE(&sci0, "ERROR | No conductor has been chosen yet but we got a conductor message.\n");
+      #endif
+
+      return;
+    }
+
+    if(current_conductor != group) {
+      #if LOG_LEVEL >= 1
+      SCI_WRITE(&sci0, "ERROR | Received conductor message from wrong conductor, node: ");
+      char strBuffer[4];
+      itoa(group, strBuffer, 10);
+      SCI_WRITE(&sci0, strBuffer);
+      SCI_WRITECHAR(&sci0, '\n');
+      #endif
+
+      return;
+    }
+
+    #if LOG_LEVEL >= 2
+    SCI_WRITE(&sci0, "INFO | Received conductor message with type: ");
+    char strBuffer[10];
+    itoa(type, strBuffer, 10);
+    SCI_WRITE(&sci0, strBuffer);
+    SCI_WRITECHAR(&sci0, '\n');
+    #endif
+
+    switch (type) {
+      case TYPE_NOTE_TO_PLAY:
+        char note = (char)msg->buff[1];
+        SYNC(&musicPlayer, set_index, note);
+        SYNC(&musicPlayer, start_playing, 0);
+        break;
+      case TYPE_RESET:
+        ASYNC(&musicPlayer, set_tempo, 120);
+        ASYNC(&musicPlayer, set_key, 0);
+        break;
+      case TYPE_PLAY:
+        ASYNC(&musicPlayer, start_playing, 0);
+        break;
+      case TYPE_STOP:
+        ASYNC(&musicPlayer, stop_playing, 0);
+        break;
+      case TYPE_SET_TEMPO:
+        short tempo = get_buffer_short_at(msg->buff, 1);
+        ASYNC(&musicPlayer, set_tempo, tempo);
+        break;
+      case TYPE_SET_KEY:
+        signed char key = get_buffer_char_at(msg->buff, 1);
+        ASYNC(&musicPlayer, set_key, key);
+        break;
+      default:
+        SCI_WRITE(&sci0, "ERROR | CONDUCTOR | Received type: ");
+
+        // Char can only be maximum three characters long + null terminator.
+        char strBuffer[10];
+        itoa(type, strBuffer, 10);
+        SCI_WRITE(&sci0, strBuffer);
+        SCI_WRITECHAR(&sci0, '\n');
+        break;
+    }
+  } else {
+    SCI_WRITE(&sci0, "ERROR | Received CAN message with ID: ");
+
+    // Char can only be maximum three characters long + null terminator.
+    char strBuffer[4];
+    itoa(msg->msgId, strBuffer, 10);
+    SCI_WRITE(&sci0, strBuffer);
+    SCI_WRITECHAR(&sci0, '\n');
+  }
+}
+
+void send_can_message(CANService *self, unsigned char msgId, unsigned char buffer[8]) {
+  // Check if we are in failure mode, either with force silent or if the bus is missing.
+  if(self->force_silent || self->bus_can_missing) {
+    #if LOG_LEVEL >= 1
+    SCI_WRITE(&sci0, "In failure mode, not sending CAN message.\n");
+    #endif
+
+    return;
+  }
+
+  CANMsg msg;
+
+  msg.nodeId = GROUP_13;
+  msg.msgId = msgId;
+
+  for (int i = 0; i < 8; i++) {
+    msg.buff[i] = buffer[i];
+  }
+
+  msg.length = 8;
+
+  self->bus_can_missing = CAN_SEND(&can0, &msg);
+
+  if(self->bus_can_missing) {
+    SCI_WRITE(&sci0, "Failed to send CAN message, entering failure mode.\n");
+    ASYNC(&app, reset_board, 0);
+  }
+
+  // Whenever we send a message receive it immediately. 
+  internal_receive_message(&msg);
+
+  #if LOG_LEVEL >= 3
+  SCI_WRITECHAR(&sci0, '\n');
+  SCI_WRITE(&sci0, "SPAM | Sent CAN message with priority: ");
+  char strBuffer[4];
+  itoa(msgId, strBuffer, 10);
+  SCI_WRITE(&sci0, strBuffer);
+  SCI_WRITE(&sci0, " and type: ");
+  itoa(buffer[0], strBuffer, 10);
+  SCI_WRITE(&sci0, strBuffer);
+  SCI_WRITECHAR(&sci0, '\n');
+  #endif
+}
+
+void send_can_message_null(CANService *self, unsigned char priority, unsigned char type) {
+  unsigned char buffer[8] = {0};
+  buffer[0] = type;
+  send_can_message(self, priority, buffer);
 }
 
 
@@ -230,6 +399,10 @@ void can_send_set_key(CANService *self, int key) {
 }
 
 void can_receive_message(CANService *self, int unused) {
+  CANMsg msg;
+  CAN_RECEIVE(&can0, &msg);
+  self->bus_can_missing = false;
+
   if (self->force_silent) {
     #if LOG_LEVEL >= 1
     SCI_WRITE(&sci0, "In force silent mode, ignoring received CAN message.\n");
@@ -238,162 +411,7 @@ void can_receive_message(CANService *self, int unused) {
     return;
   }
 
-  self->bus_can_missing = false;
-
-  CANMsg msg;
-  CAN_RECEIVE(&can0, &msg);
-
-
-  // Since we got a can message, reset the silent failure to false.
-  int group = msg.nodeId;
-  int priority = get_priority(msg.msgId);
-  int type = get_type(msg.buff);
-
-  if(group != GROUP_7 && group != GROUP_8 && group != GROUP_13) {
-    SCI_WRITE(&sci0, "ERROR | Received CAN message with invalid group: ");
-
-    char strBuffer[4];
-    itoa(group, strBuffer, 10);
-    SCI_WRITE(&sci0, strBuffer);
-    SCI_WRITECHAR(&sci0, '\n');
-
-    return;
-  }
-
-
-  if (priority == PRIORITY_HEARTBEAT) {
-    if (type == TYPE_HEARTBEAT) {
-      BEFORE(MAX_LAG_DEADLINE, &database, update_last_heartbeat, group);
-    } else if(type == TYPE_CONDUCTOR_SEND_STATE) {
-      int current_conductor = SYNC(&database, get_current_conductor, 0);
-
-      // If there is no conductor yet, set the conductor to the group of the received message.
-      if (current_conductor == -1) {
-        SYNC(&database, set_current_conductor, group);
-        current_conductor = group;
-      }
-
-      // Check if the conductor is the correct one.
-      if(current_conductor != group) {
-        #if LOG_LEVEL >= 1
-        SCI_WRITECHAR(&sci0, '\n');
-        SCI_WRITE(&sci0, "ERROR | Received conductor send state message from wrong conductor, node: ");
-        char strBuffer[4];
-        itoa(group, strBuffer, 10);
-        SCI_WRITE(&sci0, strBuffer);
-        SCI_WRITECHAR(&sci0, '\n');
-        #endif
-
-        return;
-      }
-
-      // First two bytes are the tempo, the third byte is the key.
-      short tempo = get_buffer_short_at(msg.buff, 1);
-      signed char key = get_buffer_char_at(msg.buff, 3);
-
-      ASYNC(&musicPlayer, set_tempo, tempo);
-      ASYNC(&musicPlayer, set_key, key);
-
-      // Update the heartbeat for the conductor.
-      BEFORE(MAX_LAG_DEADLINE, &database, update_last_heartbeat, group);
-    } else {
-      SCI_WRITE(&sci0, "ERROR | CONDUCTOR SEND STATE | Received type: ");
-
-      // Char can only be maximum three characters long + null terminator.
-      char strBuffer[4];
-      itoa(type, strBuffer, 10);
-      SCI_WRITE(&sci0, strBuffer);
-      SCI_WRITECHAR(&sci0, '\n');
-    }
-  } else if (priority == PRIORITY_CONDUCTOR_CLAIM) {
-    if (type == TYPE_CONDUCTOR_CLAIM) {
-      SYNC(&database, update_current_conductor, group);
-    } else {
-      SCI_WRITE(&sci0, "ERROR | CONDUCTOR CLAIM | Received type: ");
-
-      // Char can only be maximum three characters long + null terminator.
-      char strBuffer[10];
-      itoa(type, strBuffer, 10);
-      SCI_WRITE(&sci0, strBuffer);
-      SCI_WRITECHAR(&sci0, '\n');
-    }
-  } else if (priority == PRIORITY_CONDUCTOR) {
-    // Conductor message.
-    int current_conductor = SYNC(&database, get_current_conductor, 0);
-
-    if(current_conductor == -1) {
-      #if LOG_LEVEL >= 1
-      SCI_WRITE(&sci0, "ERROR | No conductor has been chosen yet but we got a conductor message.\n");
-      #endif
-
-      return;
-    }
-
-    if(current_conductor != group) {
-      #if LOG_LEVEL >= 1
-      SCI_WRITE(&sci0, "ERROR | Received conductor message from wrong conductor, node: ");
-      char strBuffer[4];
-      itoa(group, strBuffer, 10);
-      SCI_WRITE(&sci0, strBuffer);
-      SCI_WRITECHAR(&sci0, '\n');
-      #endif
-
-      return;
-    }
-
-    #if LOG_LEVEL >= 2
-    SCI_WRITE(&sci0, "INFO | Received conductor message with type: ");
-    char strBuffer[10];
-    itoa(type, strBuffer, 10);
-    SCI_WRITE(&sci0, strBuffer);
-    SCI_WRITECHAR(&sci0, '\n');
-    #endif
-
-    switch (type) {
-      case TYPE_NOTE_TO_PLAY:
-        char note = (char)msg.buff[1];
-        ASYNC(&musicPlayer, set_index, note);
-
-        if(!SYNC(&musicPlayer, is_playing, 0)) {
-          ASYNC(&musicPlayer, start_playing, 0);
-        }
-        break;
-      case TYPE_RESET:
-        ASYNC(&musicPlayer, set_tempo, 120);
-        ASYNC(&musicPlayer, set_key, 0);
-        break;
-      case TYPE_PLAY:
-        ASYNC(&musicPlayer, start_playing, 0);
-        break;
-      case TYPE_STOP:
-        ASYNC(&musicPlayer, stop_playing, 0);
-        break;
-      case TYPE_SET_TEMPO:
-        short tempo = get_buffer_short_at(msg.buff, 1);
-        ASYNC(&musicPlayer, set_tempo, tempo);
-        break;
-      case TYPE_SET_KEY:
-        signed char key = get_buffer_char_at(msg.buff, 1);
-        ASYNC(&musicPlayer, set_key, key);
-        break;
-      default:
-        SCI_WRITE(&sci0, "ERROR | CONDUCTOR | Received type: ");
-
-        // Char can only be maximum three characters long + null terminator.
-        char strBuffer[10];
-        itoa(type, strBuffer, 10);
-        SCI_WRITE(&sci0, strBuffer);
-        SCI_WRITECHAR(&sci0, '\n');
-        break;
-    }
-  } else {
-    SCI_WRITE(&sci0, "ERROR | Received CAN message with ID: ");
-
-    // Char can only be maximum three characters long + null terminator.
-    char strBuffer[4];
-    itoa(msg.msgId, strBuffer, 10);
-    SCI_WRITE(&sci0, strBuffer);
-    SCI_WRITECHAR(&sci0, '\n');
-  }
+  internal_receive_message(&msg);
 }
+
 
