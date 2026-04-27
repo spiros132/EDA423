@@ -64,7 +64,26 @@ int get_buffer_int_at(unsigned char buffer[8], int index) {
   return value;
 }
 
+int find_buffered_message_index(CANService *self, int msgId) {
+  for (int i = 0; i < BUFFER_SIZE; i++) {
+    if (!self->received_msg_used[i]) {
+      continue;
+    }
+
+    if (self->received_msg[i].msgId == msgId) {
+      return i;
+    }
+  }
+
+  return -1;
+}
+
 void internal_receive_message(CANMsg *msg) {
+  // We don't need to do anything here for problem 5
+
+  SCI_WRITE(&sci0, "Delivered CAN message\n");
+  return;
+
   // Since we got a can message, reset the silent failure to false.
   int group = msg->nodeId;
   int priority = get_priority(msg->msgId);
@@ -465,35 +484,188 @@ void can_send_set_key(CANService *self, int key) {
   #endif
 }
 
+void can_send_one_message(CANService *self, int unused) {
+  unsigned char buff[8] = {0};
+  send_can_message(self, self->current_send_index, buff);
+
+  self->current_send_index = (self->current_send_index + 1) % 128;
+
+  #if LOG_LEVEL >= 2
+  SCI_WRITE(&sci0, "Sent a one message\n");
+  #endif
+}
+
+void can_start_burst(CANService *self, int unused) {
+  if(self->burst_message != NULL) {
+    ABORT(self->burst_message);
+    self->burst_message = NULL;
+  }
+
+  self->burst_message = BEFORE(MAX_LAG_DEADLINE, self, can_send_burst, 0);
+
+  #if LOG_LEVEL >= 2
+  SCI_WRITE(&sci0, "Started burst\n");
+  #endif
+}
+
+void can_send_burst(CANService *self, int unused) {
+  can_send_one_message(self, 0);
+
+  self->burst_message = SEND(MSEC(500), MAX_LAG_DEADLINE, self, can_send_burst, 0);
+}
+
+void can_stop_burst(CANService *self, int unused) {
+  if (self->burst_message != NULL) {
+    ABORT(self->burst_message);
+    self->burst_message = NULL;
+
+    #if LOG_LEVEL >= 2
+    SCI_WRITE(&sci0, "Stopped burst\n");
+    #endif
+  }
+}
+
+void can_deliver_message(CANService *self, int index) {
+  // Get next message to deliver if it exists.
+
+  // Check for each index in the received messages.
+  // If we can get to a message where the index is one more than the last delivered, deliver the message.
+  // Otherwise
+
+  if (!self->received_msg_used[index]) {
+    SCI_WRITE(&sci0, "ERROR | Tried to deliver a CAN message that does not exist at index: ");
+    char strBuff[10];
+    itoa(index, strBuff, 10);
+    SCI_WRITE(&sci0, strBuff);
+    SCI_WRITECHAR(&sci0, '\n');
+    return;
+  }
+
+  CANMsg msgPtr;
+
+  msgPtr.msgId = self->received_msg[index].msgId;
+  msgPtr.nodeId = self->received_msg[index].nodeId;
+  msgPtr.length = self->received_msg[index].length;
+  for (int i = 0; i < 8; i++) {
+    msgPtr.buff[i] = self->received_msg[index].buff[i];
+  }
+
+  int delivered_msg_id = msgPtr.msgId;
+
+  internal_receive_message(&msgPtr);
+
+  self->received_msg_used[index] = 0;
+
+  int buffer_length = 0;
+  for(int i = 0; i < BUFFER_SIZE; i++) {
+    if(self->received_msg_used[i]) {
+      buffer_length++;
+    }
+  }
+  if(buffer_length == 0) {
+    self->preferred_index = 0;
+  }
+
+  self->last_delivered_index = delivered_msg_id;
+  T_RESET(&self->last_delivered_timer);
+
+  int next_index = find_buffered_message_index(self, (delivered_msg_id + 1) % 128);
+  if (next_index != -1) {
+    SEND(INTER_ARRIVAL_TIME, MAX_LAG_DEADLINE, self, can_deliver_message, next_index);
+  }
+}
+
 void can_receive_message(CANService *self, int unused) {
   CANMsg msg;
   CAN_RECEIVE(&can0, &msg);
 
-  if(self->bus_can_missing) {
-    SCI_WRITE(&sci0, "Leaving Silent Failure\n");
-    self->bus_can_missing = false;
+  // If we have waited more than the inter arrival time,
+  // deliver the message immediately,
+  // otherwise, put it in the buffer and send the can_deliver_message. Also check if there are any other messages that we should deliver afterwards.
 
-    if(self->conductor_last) {
-      self->conductor_last = false;
-      SCI_WRITE(&sci0, "I Now Join As A Musician\n");
+  Time diff = T_SAMPLE(&self->last_delivered_timer);
+
+  #if LOG_LEVEL >= 3
+  SCI_WRITE(&sci0, "Received CAN message with ID: ");
+  char strBuff[10];
+  itoa(msg.msgId, strBuff, 10);
+  SCI_WRITE(&sci0, strBuff);
+  SCI_WRITE(&sci0, " and time since last delivered message: ");
+  itoa(MSEC_OF(diff), strBuff, 10);
+  SCI_WRITE(&sci0, strBuff);
+  SCI_WRITECHAR(&sci0, '\n');
+  #endif
+
+  int i = -1;
+
+  // Check if there is space in the buffer at or after the preferred index.
+  for (int offset = 0; offset < BUFFER_SIZE; offset++) {
+    int candidate = (self->preferred_index + offset) % BUFFER_SIZE;
+
+    if (!self->received_msg_used[candidate]) {
+      i = candidate;
+      self->preferred_index = (candidate + 1) % BUFFER_SIZE;
+      break;
     }
   }
 
-  if (self->force_silent) {
-    #if LOG_LEVEL >= 1
-    SCI_WRITE(&sci0, "In force silent mode, skipping received CAN message.\n");
-    #endif
-
-    stop_heartbeat_message(self, 0);
-
+  if (i == -1) {
+    SCI_WRITE(&sci0, "ERROR | CAN receive buffer overflow, dropping message.\n");
     return;
   }
 
-  if(self->heartbeat_message == NULL) {
-    self->heartbeat_message = BEFORE(MAX_LAG_DEADLINE, self, can_send_heartbeat, 0);
+  self->received_msg[i].msgId = msg.msgId;
+  self->received_msg[i].nodeId = msg.nodeId;
+  self->received_msg[i].length = msg.length;
+  for (int j = 0; j < 8; j++) {
+    self->received_msg[i].buff[j] = msg.buff[j];
+  }
+  self->received_msg_used[i] = 1;
+
+  // Check if the message we just got is supposed to be the next index.
+  if (msg.msgId == ((self->last_delivered_index + 1) % 128)) {
+    Time delay = 0;
+
+    if (diff < INTER_ARRIVAL_TIME) {
+      delay = INTER_ARRIVAL_TIME - diff;
+    }
+
+    SEND(delay, MAX_LAG_DEADLINE, self, can_deliver_message, i);
+  } else {
+    #if LOG_LEVEL >= 3
+    SCI_WRITE(&sci0, "Received out of order message. Message ID: ");
+    char strBuff[10];
+    itoa(msg.msgId, strBuff, 10);
+    SCI_WRITE(&sci0, strBuff);
+    SCI_WRITECHAR(&sci0, '\n');
+    #endif
   }
 
-  internal_receive_message(&msg);
+  // if(self->bus_can_missing) {
+  //   SCI_WRITE(&sci0, "Leaving Silent Failure\n");
+  //   self->bus_can_missing = false;
+
+  //   if(self->conductor_last) {
+  //     self->conductor_last = false;
+  //     SCI_WRITE(&sci0, "I Now Join As A Musician\n");
+  //   }
+  // }
+
+  // if (self->force_silent) {
+  //   #if LOG_LEVEL >= 1
+  //   SCI_WRITE(&sci0, "In force silent mode, skipping received CAN message.\n");
+  //   #endif
+
+  //   stop_heartbeat_message(self, 0);
+
+  //   return;
+  // }
+
+  // if(self->heartbeat_message == NULL) {
+  //   self->heartbeat_message = BEFORE(MAX_LAG_DEADLINE, self, can_send_heartbeat, 0);
+  // }
+
+  // internal_receive_message(&msg);
 }
 
 

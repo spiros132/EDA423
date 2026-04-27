@@ -4,7 +4,7 @@
 #include "TinyTimber.h"
 #include "Definitions.h"
 #include <stdbool.h>
-
+#include "canTinyTimber.h"
 
 typedef struct {
   Object super;

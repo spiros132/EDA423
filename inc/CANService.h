@@ -3,6 +3,7 @@
 
 #include "TinyTimber.h"
 #include "canTinyTimber.h"
+#include "Definitions.h"
 
 
 typedef struct {
@@ -20,6 +21,23 @@ typedef struct {
   /// @brief A boolean to see if we were the conductor before we failed.
   int conductor_last;
 
+  /// @brief The current index we last send in a message.
+  int current_send_index;
+
+  /// @brief The message for the burst functionality.
+  Msg burst_message;
+
+  /// @brief The index of the last message delivered.
+  int last_delivered_index;
+
+  /// @brief The preferred index to put the next message in the buffer.
+  int preferred_index;
+
+  /// @brief The time when the last message was delivered.
+  Timer last_delivered_timer;
+
+  int received_msg_used[BUFFER_SIZE];
+  CANMsg received_msg[BUFFER_SIZE];
 } CANService;
 
 
@@ -33,7 +51,21 @@ typedef struct {
   /* heartbeat_message */ \
   NULL, \
   /* conductor_last */ \
-  false \
+  false, \
+  /* current_send_index */ \
+  0, \
+  /* burst_message */ \
+  NULL, \
+  /* last_delivered_index */ \
+  -1, \
+  /* preferred_index */ \
+  0, \
+  /* last_delivered_timer */ \
+  initTimer(), \
+  /* received_msg_used */ \
+  {0}, \
+  /* received_msg */ \
+  {0} \
 }
 
 /// @brief Sets the force silent mode of the object. If the force silent mode is enabled, the board will ignore any send or receive CAN requests.
@@ -120,6 +152,32 @@ void can_send_set_tempo(CANService *, int);
 /// @param int The new key to set. This parameter should have the size of a char.
 void can_send_set_key(CANService *, int);
 
+
+/// @brief Send one message with the appropriate msgId.
+/// @param CANService The CANService object.
+/// @param int Unused parameter.
+void can_send_one_message(CANService *, int);
+
+/// @brief Start the burst mode, where we send messages at 500 ms.
+/// @param CANService The CANService object.
+/// @param int Unused parameter.
+void can_start_burst(CANService *, int);
+
+/// @brief The burst functionality.
+/// @param CANService The CANService object.
+/// @param int Unused parameter.
+void can_send_burst(CANService *, int);
+
+/// @brief Stops the burst mode.
+/// @param CANService The CANService object.
+/// @param int Unused parameter.
+void can_stop_burst(CANService *, int);
+
+
+/// @brief A function to deliver the next message from the buffer.
+/// @param CANService The CANService object.
+/// @param int Index of the message to deliver.
+void can_deliver_message(CANService *, int);
 
 /// @brief A function to receive a CAN message from the CAN bus and handle it accordingly.
 /// @param CANService The CANService object.

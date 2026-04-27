@@ -79,7 +79,7 @@
 /// @brief The key for setting the volume to a specific value.
 #define KEY_SET_VOLUME 'z'
 /// @brief The key for setting the key of the music to a specific value.
-#define KEY_SET_KEY 'x'
+#define KEY_SET_KEY 'n'
 /// @brief The key for setting the tempo to a specific value.
 #define KEY_SET_TEMPO 'c'
 
@@ -90,7 +90,7 @@
 /// @brief The key for toggling the music (play/stop).
 #define KEY_MUSIC_PLAY_2 ' '
 /// @brief The key for restarting the music.
-#define KEY_MUSIC_RESTART 'o'
+#define KEY_MUSIC_RESTART 'u'
 
 
 /// @brief The key for enabling debug printing of tempo and key.
@@ -109,6 +109,14 @@
 #define KEY_FAILURE_1 'j'
 #define KEY_FAILURE_2 'k'
 
+
+/* Problem 5 */
+#define KEY_SEND_ONE_MESSAGE 'o'
+#define KEY_START_BURST 'b'
+#define KEY_STOP_BURST 'x'
+
+#define INTER_ARRIVAL_TIME MSEC(1000)
+#define BUFFER_SIZE 100
 
 /* Debug Definitions */
 

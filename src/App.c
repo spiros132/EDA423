@@ -280,6 +280,15 @@ void reader(App *self, int c) {
   case KEY_PRINT_MEMBERSHIPS:
     print_memberships();
     break;
+  case KEY_SEND_ONE_MESSAGE:
+    SYNC(&canService, can_send_one_message, 0);
+    break;
+  case KEY_START_BURST:
+    SYNC(&canService, can_start_burst, 0);
+    break;
+  case KEY_STOP_BURST:
+    SYNC(&canService, can_stop_burst, 0);
+    break;
   case '-':
     if (self->bufferLength != 0)
       return;
@@ -307,7 +316,7 @@ void startApp(App *self, int arg) {
   SCI_WRITE(&sci0, "Hello, hello...\n");
   SCI_WRITE(&sci0, "Enter integer: \n");
 
-  SYNC(&canService, can_send_heartbeat, 0);
+  //SYNC(&canService, can_send_heartbeat, 0);
 }
 
 int main() {
