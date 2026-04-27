@@ -38,6 +38,10 @@ void start_failure_mode(App *self, int unused) {
 void stop_failure_mode(App *self, int unused) {
   SYNC(&canService, can_set_force_silent, false);
 
+  if (self->heartbeat_msg != NULL) {
+    ABORT(self->heartbeat_msg);
+  }
+
   heartbeat_tick(self, 0);
 
   #if LOG_LEVEL >= 1
@@ -68,7 +72,7 @@ void finish_input(App *self, int unused) {
 
 void heartbeat_tick(App *self, int unused) {
   // Send the heartbeat to ourselves as well.
-  BEFORE(MAX_LAG_DEADLINE, &database, update_last_heartbeat, GROUP_13);
+  //BEFORE(MAX_LAG_DEADLINE, &database, update_last_heartbeat, GROUP_13);
 
   int mode = SYNC(&database, get_mode, 0);
 
@@ -76,9 +80,9 @@ void heartbeat_tick(App *self, int unused) {
   if(mode == MUSICIAN_MODE) {
     SYNC(&canService, can_send_heartbeat, 0);
   } else if (mode == CONDUCTOR_MODE) {
-    int tempo = SYNC(&musicPlayer, get_tempo, 0);
-    int key = SYNC(&musicPlayer, get_key, 0);
-
+    short tempo = (short)SYNC(&musicPlayer, get_tempo, 0);
+    signed char key = (signed char)SYNC(&musicPlayer, get_key, 0);
+    
     int args = can_send_conductor_state_pack(tempo, key);
     SYNC(&canService, can_send_conductor_state, args);
   }
@@ -181,7 +185,7 @@ void reader(App *self, int c) {
   switch ((char)c)
   {
   case KEY_CLAIM_CONDUCTORSHIP:
-    can_send_conductor_claim(&canService, 0);
+    SYNC(&canService, can_send_conductor_claim, 0);
     break;
   case KEY_SUBMIT:
     SCI_WRITECHAR(&sci0, '\n');
