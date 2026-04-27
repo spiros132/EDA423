@@ -13,6 +13,10 @@ typedef struct {
 
   /// @brief A boolean to indicate whether the board has been failing to connect to the CAN bus.
   int bus_can_missing;
+
+  /// @brief The heartbeat message that is sent to the other boards.
+  Msg heartbeat_message;
+
 } CANService;
 
 
@@ -22,7 +26,9 @@ typedef struct {
   /* force_silent */ \
   false, \
   /* bus_can_missing */ \
-  false \
+  false, \
+  /* heartbeat_message */ \
+  NULL \
 }
 
 /// @brief Sets the force silent mode of the object. If the force silent mode is enabled, the board will ignore any send or receive CAN requests.
@@ -41,6 +47,11 @@ int can_get_force_silent(CANService *, int);
 /// @param CANService The CANService object.
 /// @param int Unused parameter.
 void can_send_heartbeat(CANService *, int);
+
+/// @brief Stops the heartbeat message loop.
+/// @param CANService The CANService object.
+/// @param int Unused parameter.
+void stop_heartbeat_message(CANService *, int);
 
 
 /// @brief A function to send the conductor state (tempo and key) to the other boards.

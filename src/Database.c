@@ -18,7 +18,7 @@ void update_heartbeat_off(Database *self, int group) {
 
 void update_last_heartbeat(Database *self, int group) {
   if(group == GROUP_13) {
-    #if LOG_LEVEL >= 2
+    #if LOG_LEVEL >= 3
     SCI_WRITE(&sci0, "Received heartbeat from ourselves!\n");
     #endif
     
@@ -122,6 +122,8 @@ void check_heartbeat_7(Database *self, int unused) {
     } else if (self->heartbeats[GROUP_13] == 1) {
       self->current_conductor = GROUP_13;
 
+      SCI_WRITE(&sci0, "I Am The New Conductor\n");
+
       #if LOG_LEVEL >= 1
       SCI_WRITE(&sci0, "\nNo heartbeat from conductor 7 or 8, switching to new conductor: 13\n");
       #endif
@@ -149,6 +151,8 @@ void check_heartbeat_8(Database *self, int unused) {
       #endif
     } else if (self->heartbeats[GROUP_13] == 1) {
       self->current_conductor = GROUP_13;
+
+      SCI_WRITE(&sci0, "I Am The New Conductor\n");
 
       #if LOG_LEVEL >= 1
       SCI_WRITE(&sci0, "\nNo heartbeat from conductor 8, switching to new conductor: 13\n");
@@ -213,6 +217,8 @@ void database_reset_board(Database *self, int unused) {
   }
 
   self->current_conductor = -1;
+
+  SCI_WRITE(&sci0, "Conductorship Void Due To Failure\n");
 
   if (self->check_conductor_claim_msg != NULL) {
     ABORT(self->check_conductor_claim_msg);

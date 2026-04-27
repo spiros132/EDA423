@@ -30,9 +30,7 @@ void start_failure_mode(App *self, int unused) {
 
   reset_board(self, 0);
 
-  if (self->heartbeat_msg != NULL) {
-    ABORT(self->heartbeat_msg);
-  }
+  SYNC(&canService, stop_heartbeat_message, 0);
 
   #if LOG_LEVEL >= 1
   SCI_WRITE(&sci0, "Entered silent failure mode.\n");
@@ -42,11 +40,15 @@ void start_failure_mode(App *self, int unused) {
 void stop_failure_mode(App *self, int unused) {
   SYNC(&canService, can_set_force_silent, false);
 
-  if (self->heartbeat_msg != NULL) {
-    ABORT(self->heartbeat_msg);
-  }
+  SYNC(&canService, can_send_heartbeat, 0);
 
-  heartbeat_tick(self, 0);
+  // TODO: This won't work since the active_boards are only updated after a while.
+  // Check if we are alone in the network, if so become the conductor and start playing the melody.
+  int active_boards = SYNC(&database, get_active_boards, 0);
+  if (active_boards == 1) {
+    SYNC(&database, set_current_conductor, GROUP_13);
+    ASYNC(&musicPlayer, start_playing, 0);
+  }
 
   #if LOG_LEVEL >= 1
   SCI_WRITE(&sci0, "Exited silent failure mode.\n");
@@ -72,23 +74,6 @@ void finish_input(App *self, int unused) {
   }
 
   clear_input(self, unused);
-}
-
-void heartbeat_tick(App *self, int unused) {
-  int mode = SYNC(&database, get_mode, 0);
-
-  // Send a heartbeat message every 200ms.
-  if(mode == MUSICIAN_MODE) {
-    SYNC(&canService, can_send_heartbeat, 0);
-  } else if (mode == CONDUCTOR_MODE) {
-    short tempo = (short)SYNC(&musicPlayer, get_tempo, 0);
-    signed char key = (signed char)SYNC(&musicPlayer, get_key, 0);
-    
-    int args = can_send_conductor_state_pack(tempo, key);
-    SYNC(&canService, can_send_conductor_state, args);
-  }
-
-  self->heartbeat_msg = SEND(MSEC(200), MAX_LAG_DEADLINE, self, heartbeat_tick, 0);
 }
 
 void print_debug_info(App *self, int unused) {
@@ -324,7 +309,7 @@ void startApp(App *self, int arg) {
   SCI_WRITE(&sci0, "Hello, hello...\n");
   SCI_WRITE(&sci0, "Enter integer: \n");
 
-  heartbeat_tick(self, 0);
+  SYNC(&canService, can_send_heartbeat, 0);
 }
 
 int main() {

@@ -15,8 +15,6 @@ typedef struct {
   int historyLength;
 
   Msg debug_msg;
-
-  Msg heartbeat_msg;
 } App;
 
 
@@ -32,8 +30,6 @@ typedef struct {
   /* History Length */ \
   0, \
   /* Debug Msg */ \
-  NULL, \
-  /* Heartbeat Msg */ \
   NULL \
 }
 
@@ -52,11 +48,6 @@ void finish_input(App *, int);
 /// @param int Unused parameter.
 void clear_input(App *, int);
 
-
-/// @brief The loop that will send heartbeats to the other boards.
-/// @param App The app object.
-/// @param int Unused parameter.
-void heartbeat_tick(App *, int);
 
 /// @brief Prints out the debug information about the current tempo.
 /// @param App The app object.

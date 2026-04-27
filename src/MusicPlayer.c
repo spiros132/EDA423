@@ -205,7 +205,7 @@ void next_note(MusicPlayer *self, int unused)
 
   // If we are the conductor, we should also send a message to the musicians with which current node we are playing.
   if (mode == CONDUCTOR_MODE) {
-    SYNC(&canService, can_send_conductor_state, can_send_conductor_state_pack(self->tempo, self->key));
+    SYNC(&canService, can_send_note_to_play, self->index);
   }
 }
 
