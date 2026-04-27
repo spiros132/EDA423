@@ -250,7 +250,7 @@ void send_can_message(CANService *self, unsigned char msgId, unsigned char buffe
   if(self->force_silent || self->bus_can_missing) {
     #if LOG_LEVEL >= 1
     SCI_WRITE(&sci0, "In failure mode, skipping send of the CAN message.\n");
-    #endif  
+    #endif
 
     return;
   }
@@ -269,13 +269,17 @@ void send_can_message(CANService *self, unsigned char msgId, unsigned char buffe
   self->bus_can_missing = CAN_SEND(&can0, &msg);
 
   if(self->bus_can_missing) {
-    SCI_WRITE(&sci0, "Failed to send CAN message, entering failure mode.\n");
+    SCI_WRITE(&sci0, "Silent Failure\n");
     ASYNC(&app, reset_board, 0);
     stop_heartbeat_message(self, 0);
+
+    if(SYNC(&database, get_mode, 0) == CONDUCTOR_MODE) {
+      self->conductor_last = true;
+    }
   }
 
-  // Whenever we send a message receive it immediately. 
-  internal_receive_message(&msg);
+  // Whenever we send a message receive it immediately.
+  //internal_receive_message(&msg);
 
   #if LOG_LEVEL >= 3
   SCI_WRITECHAR(&sci0, '\n');
@@ -304,6 +308,15 @@ void can_set_force_silent(CANService *self, int new_value) {
 
   if (new_value) {
     stop_heartbeat_message(self, 0);
+
+    if(SYNC(&database, get_mode, 0) == CONDUCTOR_MODE) {
+      self->conductor_last = true;
+    }
+  } else {
+    if(self->conductor_last) {
+      self->conductor_last = false;
+      SCI_WRITE(&sci0, "I Now Join As A Musician\n");
+    }
   }
 }
 
@@ -315,6 +328,9 @@ int can_get_force_silent(CANService *self, int unused) {
 /* SEND FUNCTIONS */
 
 void can_send_heartbeat(CANService *self, int unused) {
+  if(self->force_silent || self->bus_can_missing) {
+    return;
+  }
 
   if (SYNC(&database, get_mode, 0) == MUSICIAN_MODE) {
     send_can_message_null(self, PRIORITY_HEARTBEAT, TYPE_HEARTBEAT);
@@ -452,7 +468,16 @@ void can_send_set_key(CANService *self, int key) {
 void can_receive_message(CANService *self, int unused) {
   CANMsg msg;
   CAN_RECEIVE(&can0, &msg);
-  self->bus_can_missing = false;
+
+  if(self->bus_can_missing) {
+    SCI_WRITE(&sci0, "Leaving Silent Failure\n");
+    self->bus_can_missing = false;
+
+    if(self->conductor_last) {
+      self->conductor_last = false;
+      SCI_WRITE(&sci0, "I Now Join As A Musician\n");
+    }
+  }
 
   if (self->force_silent) {
     #if LOG_LEVEL >= 1

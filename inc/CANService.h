@@ -17,6 +17,9 @@ typedef struct {
   /// @brief The heartbeat message that is sent to the other boards.
   Msg heartbeat_message;
 
+  /// @brief A boolean to see if we were the conductor before we failed.
+  int conductor_last;
+
 } CANService;
 
 
@@ -28,7 +31,9 @@ typedef struct {
   /* bus_can_missing */ \
   false, \
   /* heartbeat_message */ \
-  NULL \
+  NULL, \
+  /* conductor_last */ \
+  false \
 }
 
 /// @brief Sets the force silent mode of the object. If the force silent mode is enabled, the board will ignore any send or receive CAN requests.
