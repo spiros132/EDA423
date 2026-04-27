@@ -181,6 +181,9 @@ void next_note(MusicPlayer *self, int unused)
     SYNC(&soundPlayer, soundplayer_set_playing, true);
     /* Play the tone */
     BEFORE(MAX_LAG_DEADLINE, &soundPlayer, soundplayer_play_tone, true);
+  } else {
+    // We are not supposed to play this note, make sure we are not playing.
+    SYNC(&soundPlayer, soundplayer_set_playing, false);
   }
 
   // Get the beat time, convert from beats per minute, to how many milliseconds for one beat.
