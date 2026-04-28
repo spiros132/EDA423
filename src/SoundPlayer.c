@@ -17,12 +17,8 @@ extern Serial sci0;
 
 void soundplayer_play_tone(SoundPlayer *self, int play) {
   self->play_tone_msg = NULL;
-  if(!(self->playing)){
-    if(self->play_tone_msg != NULL) {
-      ABORT(self->play_tone_msg);
-      self->play_tone_msg = NULL;
-    }
 
+  if(!self->playing){
     DAC_REG = 0;
 
     #if LOG_LEVEL >= 3
