@@ -560,6 +560,7 @@ void can_deliver_message(CANService *self, int index) {
   for(int i = 0; i < BUFFER_SIZE; i++) {
     if(self->received_msg_used[i]) {
       buffer_length++;
+      break;
     }
   }
   if(buffer_length == 0) {
