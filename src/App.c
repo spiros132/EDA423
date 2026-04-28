@@ -30,14 +30,11 @@ void start_failure_mode(App *self, int unused) {
 
   reset_board(self, 0);
 
-  SYNC(&canService, stop_heartbeat_message, 0);
-
   SCI_WRITE(&sci0, "Silent Failure\n");
 }
 
 void stop_failure_mode(App *self, int unused) {
   SYNC(&canService, can_set_force_silent, false);
-  SYNC(&canService, can_send_heartbeat, 0);
 
   SEND(HEARTBEAT_TIMEOUT, MAX_LAG_DEADLINE, self, check_active_boards, 0);
 
@@ -75,6 +72,8 @@ void finish_input(App *self, int unused) {
 }
 
 void print_debug_info(App *self, int unused) {
+  self->debug_msg = NULL;
+  
   int mode = SYNC(&database, get_mode, 0);
 
   if(mode == CONDUCTOR_MODE) {
@@ -152,7 +151,8 @@ void clear_input(App *self, int unused) {
 }
 
 void receiver(App *self, int unused) {
-  SYNC(&canService, can_receive_message, 0);
+  //SYNC(&canService, can_receive_message, 0);
+  SCI_WRITE(&sci0, "WRONG FUNCTION\n");
 }
 
 void reader(App *self, int c) {
