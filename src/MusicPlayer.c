@@ -93,7 +93,8 @@ void start_playing(MusicPlayer *self, int unused)
 {
   if (!is_playing(self, 0)) {
     // Call the next_note function which starts the loop
-    self->next_note_msg = BEFORE(MAX_LAG_DEADLINE, self, next_note, 0);
+    self->is_playing = true;
+    next_note(self, 0);
   }
 }
 
@@ -108,7 +109,7 @@ void stop_playing(MusicPlayer *self, int unused)
 void pause_playing(MusicPlayer *self, int unused)
 {
   if (is_playing(self, 0)) {
-    abort_msg(self, 0);
+    self->is_playing = false;
 
     SYNC(&soundPlayer, soundplayer_set_playing, false);
   }
@@ -129,28 +130,14 @@ void toggle_playing(MusicPlayer *self, int unused)
 
 int is_playing(MusicPlayer *self, int unused)
 {
-  return self->next_note_msg != NULL || self->finish_note_msg != NULL;
-}
-
-void abort_msg(MusicPlayer *self, int unused)
-{
-  if(self->next_note_msg != NULL) {
-    ABORT(self->next_note_msg);
-    self->next_note_msg = NULL;
-  }
-
-  if(self->finish_note_msg != NULL) {
-    ABORT(self->finish_note_msg);
-    self->finish_note_msg = NULL;
-  }
-
-  // Since we are aborting, close the soundplayer
-  SYNC(&soundPlayer, soundplayer_set_playing, false);
+  return self->is_playing;
 }
 
 void next_note(MusicPlayer *self, int unused)
 {
-  self->next_note_msg = NULL;
+  if(self->is_playing == false) {
+    return;
+  }
 
   // Change the current note:
   // - Get the period of the node with the index "index"
@@ -207,30 +194,87 @@ void next_note(MusicPlayer *self, int unused)
   // 60/bpm = (60/2*minute)/beat * 1000
 
   // Schedule the finish_note function
-  self->finish_note_msg = SEND(MSEC(mspb), MAX_LAG_DEADLINE, self, finish_note, 0);
+  SEND(MSEC(mspb), MAX_LAG_DEADLINE, self, finish_note, 0);
   self->index = (self->index + 1) % NOTES_AMOUNT;
 
 }
 
 void finish_note(MusicPlayer *self, int unused)
 {
-  self->finish_note_msg = NULL;
-
   SYNC(&soundPlayer, soundplayer_set_playing, false);
 
   // Schedule the next_note function
   // Run next_note after 50 ms and make it so that it should have finished putting all the settings etc after 100
-  self->next_note_msg = SEND(MSEC(50), MAX_LAG_DEADLINE, self, next_note, 0);
+  SEND(MSEC(50), MAX_LAG_DEADLINE, self, next_note, 0);
+}
+
+
+void play_note(MusicPlayer *self, int unused)
+{
+  // Change the current note:
+  // - Get the period of the node with the index "index"
+  // - Set the period on the sound player
+  // - Set the current index and do mod on it in case it gets to the end
+
+  // Check if we are just musician or conductor as well.
+  // Check if we are supposed to be playing this.
+
+  int active_boards = SYNC(&database, get_active_boards, 0);
+
+  // Check if there are any active boards at all.
+  if (active_boards == 0) {
+    SCI_WRITE(&sci0, "No active boards found. Stop playing.\n");
+
+    // Reset the states
+    stop_playing(self, 0);
+    SYNC(&soundPlayer, soundplayer_set_playing, false);
+
+    return;
+  }
+
+  int should_we_play = self->index % active_boards == (active_boards - 1);
+
+  // Check if we SHOULD play the note.
+  if (should_we_play)
+  {
+    int period = calc_period(self->notes[self->index] + self->key);
+    BEFORE(MAX_LAG_DEADLINE, &soundPlayer, soundplayer_set_period, period);
+
+    /* Activate the musicPlayer */
+    SYNC(&soundPlayer, soundplayer_set_playing, true);
+    /* Play the tone */
+    BEFORE(MAX_LAG_DEADLINE, &soundPlayer, soundplayer_play_tone, true);
+  } else {
+    // We are not supposed to play this note, make sure we are not playing.
+    SYNC(&soundPlayer, soundplayer_set_playing, false);
+  }
+
+  // Get the beat time, convert from beats per minute, to how many milliseconds for one beat.
+  // In the beats list we count a half beat as 1x, one beat as 2x and two beats as 4x.
+  // 30000 = (60/2 (because of the above reason)) * 1000 (for milliseconds)
+  int mspb = self->beats[self->index] * (30000.0 / self->tempo) - 50;
+  // bpm = beats/minute
+  // x = millisekunder/beat
+  // 60/bpm = (60/2*minute)/beat * 1000
+
+  // Schedule the finish_note function
+  SEND(MSEC(mspb), MAX_LAG_DEADLINE, self, stop_note, 0);
+  self->index = (self->index + 1) % NOTES_AMOUNT;
+}
+
+void stop_note(MusicPlayer *self, int unused)
+{
+  SYNC(&soundPlayer, soundplayer_set_playing, false);
 }
 
 void musicplayer_reset_board(MusicPlayer *self, int unused)
 {
-  abort_msg(self, 0);
   stop_playing(self, 0);
 
   self->index = 0;
   self->tempo = 120;
   self->key = 0;
+  self->is_playing = false;
 
   #if LOG_LEVEL >= 2
   SCI_WRITE(&sci0, "\nINFO | Music player reset to default state\n");

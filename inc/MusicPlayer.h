@@ -17,8 +17,7 @@ typedef struct {
   int tempo;
   int key;
 
-  Msg next_note_msg;
-  Msg finish_note_msg;
+  int is_playing;
 } MusicPlayer;
 
 #define initMusicPlayer() \
@@ -29,8 +28,7 @@ typedef struct {
   0, \
   120, \
   0, \
-  NULL, \
-  NULL \
+  false \
 }
 
 /// @brief Start playing the music.
@@ -60,12 +58,6 @@ void toggle_playing(MusicPlayer *, int);
 int is_playing(MusicPlayer *, int);
 
 
-/// @brief Aborts all the messages that are currently pending.
-/// @param MusicPlayer The MusicPlayer object.
-/// @param int Not used. Required only for the TinyTimber message signature.
-void abort_msg(MusicPlayer *, int);
-
-
 /// @brief Start playing the song by yourself, deprecated functionality for the HA1.
 /// @param MusicPlayer The MusicPlayer object.
 /// @param int Unused parameter.
@@ -75,6 +67,21 @@ void next_note(MusicPlayer *, int);
 /// @param MusicPlayer The MusicPlayer object.
 /// @param int Unused parameter.
 void finish_note(MusicPlayer *, int);
+
+
+void play_note(MusicPlayer *, int);
+
+void stop_note(MusicPlayer *, int);
+
+/// @brief This function will play a note from start to finish with no interruptions. This function should ONLY be called as a musician.
+/// @param MusicPlayer The MusicPlayer object.
+/// @param int Unused parameter.
+void play_note(MusicPlayer *, int);
+
+/// @brief This function will stop the currently playing note immediately.
+/// @param MusicPlayer The MusicPlayer object.
+/// @param int Unused parameter.
+void stop_note(MusicPlayer *, int);
 
 
 /// @brief Gets the tempo of the music player.
