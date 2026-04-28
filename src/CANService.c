@@ -21,7 +21,7 @@ extern Database database;
 /* HELPER FUNCTIONS */
 
 int get_priority(unsigned char msgID) {
-  if (msgID == 0 || msgID == 1 || msgID == 7) {
+  if (msgID == 0 || msgID == 1 || msgID == 2 || msgID == 7) {
     return msgID;
   }
 
@@ -64,7 +64,7 @@ int get_buffer_int_at(unsigned char buffer[8], int index) {
 void internal_receive_message(CANMsg *msg) {
   // Since we got a can message, reset the silent failure to false.
   int group = msg->nodeId;
-  int priority = get_priority(msg->msgId);
+  int priority = msg->msgId;
   int type = get_type(msg->buff);
 
   if(group != GROUP_7 && group != GROUP_8 && group != GROUP_13) {
@@ -89,11 +89,32 @@ void internal_receive_message(CANMsg *msg) {
   SCI_WRITECHAR(&sci0, '\n');
   #endif
 
-  if (priority == PRIORITY_HEARTBEAT) {
+  if(priority == 0) {
+    if(type == TYPE_NOTE_TO_PLAY) {
+      char note = (char)msg->buff[1];
+  
+      #if LOG_LEVEL >= 0
+      SCI_WRITE(&sci0, "Received note to play: ");
+      char noteBuffer[4];
+      itoa(note, noteBuffer, 10);
+      SCI_WRITE(&sci0, noteBuffer);
+      SCI_WRITECHAR(&sci0, '\n');
+      #endif
+
+      // TODO: Check if we are supposed to be playing this note.
+      if (SYNC(&database, get_mode, 0) == MUSICIAN_MODE) {
+        SYNC(&musicPlayer, set_index, note);
+
+        SYNC(&musicPlayer, play_note, 0);
+      } else {
+        SYNC(&musicPlayer, start_playing, 0);
+      }
+    }
+  } else if (priority == PRIORITY_HEARTBEAT) {
     if (type == TYPE_HEARTBEAT) {
-      BEFORE(MAX_LAG_DEADLINE, &database, update_last_heartbeat, group);
+      ASYNC(&database, update_last_heartbeat, group);
     } else if(type == TYPE_CONDUCTOR_SEND_STATE) {
-      BEFORE(MAX_LAG_DEADLINE, &database, update_last_heartbeat, group);
+      ASYNC(&database, update_last_heartbeat, group);
 
       int current_conductor = SYNC(&database, get_current_conductor, 0);
 
@@ -186,24 +207,6 @@ void internal_receive_message(CANMsg *msg) {
     }
 
     switch (type) {
-      case TYPE_NOTE_TO_PLAY:        
-        #if LOG_LEVEL >= 3
-        SCI_WRITE(&sci0, "Received note to play: ");
-        char noteBuffer[4];
-        itoa(note, noteBuffer, 10);
-        SCI_WRITE(&sci0, noteBuffer);
-        SCI_WRITECHAR(&sci0, '\n');
-        #endif
-
-        // TODO: Check if we are supposed to be playing this note.
-        if (SYNC(&database, get_mode, 0) == MUSICIAN_MODE) {
-          char note = (char)msg->buff[1];
-          SYNC(&musicPlayer, set_index, note);
-
-          SYNC(&musicPlayer, abort_msg, 0);
-          SYNC(&musicPlayer, start_playing, 0);
-        }
-        break;
       case TYPE_RESET:
         ASYNC(&musicPlayer, set_tempo, 120);
         ASYNC(&musicPlayer, set_key, 0);
@@ -348,7 +351,7 @@ void can_send_heartbeat(CANService *self, int unused) {
   SCI_WRITE(&sci0, "Sent heartbeat.\n");
   #endif
   
-  SEND(MSEC(200), MAX_LAG_DEADLINE, self, can_send_heartbeat, 0);
+  SEND(MSEC(500), MAX_LAG_DEADLINE, self, can_send_heartbeat, 0);
 }
 
 
@@ -366,7 +369,7 @@ void can_send_note_to_play(CANService *self, int note) {
   buff[0] = TYPE_NOTE_TO_PLAY;
   buff[1] = note & 0xFF;
 
-  send_can_message(self, PRIORITY_CONDUCTOR, buff);
+  send_can_message(self, 0, buff);
 
   #if LOG_LEVEL >= 3
   char strBuff[10];
