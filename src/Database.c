@@ -4,9 +4,11 @@
 #include "sciTinyTimber.h"
 #include "stdlib.h"
 #include "App.h"
+#include "CANService.h"
 
 extern App app;
 extern Serial sci0;
+extern CANService canService;
 
 void update_heartbeat_on(Database *self, int group) {
   self->heartbeats[group] = 1;
@@ -18,10 +20,6 @@ void update_heartbeat_off(Database *self, int group) {
 
 void update_last_heartbeat(Database *self, int group) {
   if(group == GROUP_13) {
-    #if LOG_LEVEL >= 3
-    SCI_WRITE(&sci0, "Received heartbeat from ourselves!\n");
-    #endif
-    
     return;
   }
 
@@ -102,12 +100,28 @@ int get_mode(Database *self, int unused) {
 }
 
 void check_heartbeat_7(Database *self, int unused) {
+  self->check_heartbeat_msgs[GROUP_7] = NULL;
+
   update_heartbeat_off(self, GROUP_7);
 
-  // Check for silent failure.
+  // Check if both heartbeat of group 7 and 8 are off and we are in the bus can missing failure state.
   if(self->heartbeats[GROUP_8] == 0) {
-    // No heartbeat gotten from anybody. This means that it's a silent failure.
-    SCI_WRITE(&sci0, "\nNo heartbeat from anybody. Most probably have failed completely and removed the cable.\n");
+    if (SYNC(&canService, can_get_bus_can_missing, 0))
+    {
+      SYNC(&app, reset_board, 0);
+
+      #if LOG_LEVEL >= 2
+      SCI_WRITE(&sci0, "\nNo heartbeat from both boards, closing board since bus is missing.\n");
+      #endif
+      return;
+    } else {
+      // Become the conductor since we are the last one in the network.
+      self->current_conductor = GROUP_13;
+
+      #if LOG_LEVEL >= 2
+      SCI_WRITE(&sci0, "\nNo heartbeat from both boards, switching conductor to ourselves.\n");
+      #endif
+    }
   }
 
   // No heartbeat from the conductor
@@ -118,7 +132,6 @@ void check_heartbeat_7(Database *self, int unused) {
       #if LOG_LEVEL >= 1
       SCI_WRITE(&sci0, "\nNo heartbeat from conductor 7, switching to new conductor: 8\n");
       #endif
-
     } else if (self->heartbeats[GROUP_13] == 1) {
       self->current_conductor = GROUP_13;
 
@@ -134,12 +147,28 @@ void check_heartbeat_7(Database *self, int unused) {
 }
 
 void check_heartbeat_8(Database *self, int unused) {
+  self->check_heartbeat_msgs[GROUP_8] = NULL;
+
   update_heartbeat_off(self, GROUP_8);
 
-  // Check for silent failure.
+  // Check if both heartbeat of group 7 and 8 are off and we are in the bus can missing failure state.
   if(self->heartbeats[GROUP_7] == 0) {
-    // No heartbeat gotten from anybody. This means that it's a silent failure.
-    SCI_WRITE(&sci0, "\nNo heartbeat from anybody. Most probably have failed completely and removed the cable.\n");
+    if (SYNC(&canService, can_get_bus_can_missing, 0))
+    {
+      SYNC(&app, reset_board, 0);
+      
+      #if LOG_LEVEL >= 2
+      SCI_WRITE(&sci0, "\nNo heartbeat from both boards, closing board since bus is missing.\n");
+      #endif
+      return;
+    } else {
+      // Become the conductor since we are the last one in the network.
+      self->current_conductor = GROUP_13;
+
+      #if LOG_LEVEL >= 2
+      SCI_WRITE(&sci0, "\nNo heartbeat from both boards, switching conductor to ourselves.\n");
+      #endif
+    }
   }
 
   if (self->current_conductor == GROUP_8){
@@ -193,10 +222,13 @@ void check_conductor_claim(Database *self, int unused) {
       self->conductor_claims[0] = 0;
       self->conductor_claims[1] = 0;
       self->conductor_claims[2] = 0;
-
+      
+      self->check_conductor_claim_msg = NULL;
       return;
     }
   }
+
+  self->check_conductor_claim_msg = NULL;
 }
 
 void database_reset_board(Database *self, int unused) {
