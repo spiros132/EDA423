@@ -6,13 +6,10 @@
 #include "Database.h"
 #include "App.h"
 
-#if LOG_LEVEL >= 1
-// DEBUG MODE
 #include "sciTinyTimber.h"
 #include "stdlib.h"
 
 extern Serial sci0;
-#endif
 
 extern Can can0;
 extern App app;
@@ -188,19 +185,21 @@ void internal_receive_message(CANMsg *msg) {
       return;
     }
 
-    #if LOG_LEVEL >= 3
-    SCI_WRITE(&sci0, "INFO | Received conductor message with type: ");
-    char strBuffer[10];
-    itoa(type, strBuffer, 10);
-    SCI_WRITE(&sci0, strBuffer);
-    SCI_WRITECHAR(&sci0, '\n');
-    #endif
-
     switch (type) {
-      case TYPE_NOTE_TO_PLAY:
-        char note = (char)msg->buff[1];
-        SYNC(&musicPlayer, set_index, note);
+      case TYPE_NOTE_TO_PLAY:        
+        #if LOG_LEVEL >= 3
+        SCI_WRITE(&sci0, "Received note to play: ");
+        char noteBuffer[4];
+        itoa(note, noteBuffer, 10);
+        SCI_WRITE(&sci0, noteBuffer);
+        SCI_WRITECHAR(&sci0, '\n');
+        #endif
+
+        // TODO: Check if we are supposed to be playing this note.
         if (SYNC(&database, get_mode, 0) == MUSICIAN_MODE) {
+          char note = (char)msg->buff[1];
+          SYNC(&musicPlayer, set_index, note);
+
           SYNC(&musicPlayer, abort_msg, 0);
           SYNC(&musicPlayer, start_playing, 0);
         }
@@ -210,7 +209,7 @@ void internal_receive_message(CANMsg *msg) {
         ASYNC(&musicPlayer, set_key, 0);
         break;
       case TYPE_PLAY:
-        ASYNC(&musicPlayer, start_playing, 0);
+        SYNC(&musicPlayer, start_playing, 0);
         break;
       case TYPE_STOP:
         ASYNC(&musicPlayer, stop_playing, 0);
@@ -345,6 +344,10 @@ void can_send_heartbeat(CANService *self, int unused) {
     send_can_message(self, PRIORITY_HEARTBEAT, buff);
   }
 
+  #if LOG_LEVEL >= 2
+  SCI_WRITE(&sci0, "Sent heartbeat.\n");
+  #endif
+  
   SEND(MSEC(200), MAX_LAG_DEADLINE, self, can_send_heartbeat, 0);
 }
 
