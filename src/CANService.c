@@ -92,7 +92,7 @@ void internal_receive_message(CANMsg *msg) {
   if(priority == 0) {
     if(type == TYPE_NOTE_TO_PLAY) {
       char note = (char)msg->buff[1];
-  
+
       #if LOG_LEVEL >= 0
       SCI_WRITE(&sci0, "Received note to play: ");
       char noteBuffer[4];
@@ -278,7 +278,7 @@ void send_can_message(CANService *self, unsigned char msgId, unsigned char buffe
     }
   }
 
-  // Whenever we send a message receive it immediately.
+  // Whenever we send a message receive it immediately. This is only if we are not in loopback mode. Comment this out if we are in loopback mode.
   internal_receive_message(&msg);
 
   #if LOG_LEVEL >= 3
@@ -350,7 +350,7 @@ void can_send_heartbeat(CANService *self, int unused) {
   #if LOG_LEVEL >= 2
   SCI_WRITE(&sci0, "Sent heartbeat.\n");
   #endif
-  
+
   SEND(MSEC(500), MAX_LAG_DEADLINE, self, can_send_heartbeat, 0);
 }
 
