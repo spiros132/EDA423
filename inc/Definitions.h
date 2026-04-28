@@ -52,7 +52,7 @@
 #define PRINT_DEBUG_INFO_PERIOD SEC(5)
 
 /// @brief The time between two heartbeat messages to check if the other boards are alive.
-#define HEARTBEAT_TIMEOUT MSEC(250)
+#define HEARTBEAT_TIMEOUT MSEC(500)
 
 /// @brief The maximum deadline to have so that there's no lag.
 #define MAX_LAG_DEADLINE MSEC(50)
