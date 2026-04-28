@@ -13,5 +13,5 @@ MusicPlayer musicPlayer = initMusicPlayer();
 Database database = initDatabase();
 CANService canService = initCANService();
 
-Can can0 = initCan(CAN_PORT0, &app, receiver);
+Can can0 = initCan(CAN_PORT0, &canService, can_receive_message);
 Serial sci0 = initSerial(SCI_PORT0, &app, reader);
