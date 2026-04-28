@@ -16,6 +16,7 @@ extern Serial sci0;
 
 
 void soundplayer_play_tone(SoundPlayer *self, int play) {
+  self->play_tone_msg = NULL;
   if(!(self->playing)){
     if(self->play_tone_msg != NULL) {
       ABORT(self->play_tone_msg);
@@ -24,7 +25,7 @@ void soundplayer_play_tone(SoundPlayer *self, int play) {
 
     DAC_REG = 0;
 
-    #if LOG_LEVEL >= 2
+    #if LOG_LEVEL >= 3
     SCI_WRITE(&sci0, "INFO | Sound player is not playing, cannot play tone\n");
     #endif
 
@@ -61,7 +62,7 @@ void soundplayer_set_playing(SoundPlayer *self, int value) {
 
   self->playing = value;
 
-  #if LOG_LEVEL >= 2
+  #if LOG_LEVEL >= 3
   SCI_WRITE(&sci0, "INFO | Sound player set playing: ");
   if (value) {
     SCI_WRITE(&sci0, "true\n");
