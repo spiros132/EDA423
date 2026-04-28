@@ -106,7 +106,7 @@ void can_interrupt(Can *self, int unused) {
     self->head = (self->head + 1) % CAN_BUFSIZE;
     self->count++;
   } else {
-    DUMP("\n\rStrange: CAN #1 FIFO0 Full!\n\r");
+    //DUMP("\n\rStrange: CAN #1 FIFO0 Full!\n\r");
     // Handle full buffers
     // Now just discards message
   }
