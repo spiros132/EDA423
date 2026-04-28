@@ -96,6 +96,8 @@ void internal_receive_message(CANMsg *msg) {
     if (type == TYPE_HEARTBEAT) {
       BEFORE(MAX_LAG_DEADLINE, &database, update_last_heartbeat, group);
     } else if(type == TYPE_CONDUCTOR_SEND_STATE) {
+      BEFORE(MAX_LAG_DEADLINE, &database, update_last_heartbeat, group);
+
       int current_conductor = SYNC(&database, get_current_conductor, 0);
 
       // If there is no conductor yet, set the conductor to the group of the received message.
@@ -132,9 +134,6 @@ void internal_receive_message(CANMsg *msg) {
 
       ASYNC(&musicPlayer, set_tempo, tempo);
       ASYNC(&musicPlayer, set_key, key);
-
-      // Update the heartbeat for the conductor.
-      BEFORE(MAX_LAG_DEADLINE, &database, update_last_heartbeat, group);
     } else {
       SCI_WRITE(&sci0, "ERROR | CONDUCTOR SEND STATE | Received type: ");
 
@@ -189,7 +188,7 @@ void internal_receive_message(CANMsg *msg) {
       return;
     }
 
-    #if LOG_LEVEL >= 2
+    #if LOG_LEVEL >= 3
     SCI_WRITE(&sci0, "INFO | Received conductor message with type: ");
     char strBuffer[10];
     itoa(type, strBuffer, 10);
@@ -248,7 +247,7 @@ void internal_receive_message(CANMsg *msg) {
 void send_can_message(CANService *self, unsigned char msgId, unsigned char buffer[8]) {
   // Check if we are in failure mode, either with force silent or if the bus is missing.
   if(self->force_silent || self->bus_can_missing) {
-    #if LOG_LEVEL >= 1
+    #if LOG_LEVEL >= 3
     SCI_WRITE(&sci0, "In failure mode, skipping send of the CAN message.\n");
     #endif
 
@@ -271,7 +270,6 @@ void send_can_message(CANService *self, unsigned char msgId, unsigned char buffe
   if(self->bus_can_missing) {
     SCI_WRITE(&sci0, "Silent Failure\n");
     ASYNC(&app, reset_board, 0);
-    stop_heartbeat_message(self, 0);
 
     if(SYNC(&database, get_mode, 0) == CONDUCTOR_MODE) {
       self->conductor_last = true;
@@ -279,7 +277,7 @@ void send_can_message(CANService *self, unsigned char msgId, unsigned char buffe
   }
 
   // Whenever we send a message receive it immediately.
-  //internal_receive_message(&msg);
+  internal_receive_message(&msg);
 
   #if LOG_LEVEL >= 3
   SCI_WRITECHAR(&sci0, '\n');
@@ -307,8 +305,6 @@ void can_set_force_silent(CANService *self, int new_value) {
   self->force_silent = new_value;
 
   if (new_value) {
-    stop_heartbeat_message(self, 0);
-
     if(SYNC(&database, get_mode, 0) == CONDUCTOR_MODE) {
       self->conductor_last = true;
     }
@@ -324,62 +320,34 @@ int can_get_force_silent(CANService *self, int unused) {
   return self->force_silent;
 }
 
+int can_get_bus_can_missing(CANService *self, int unused) {
+  return self->bus_can_missing;
+}
 
 /* SEND FUNCTIONS */
 
 void can_send_heartbeat(CANService *self, int unused) {
-  if(self->force_silent || self->bus_can_missing) {
-    return;
-  }
-
   if (SYNC(&database, get_mode, 0) == MUSICIAN_MODE) {
     send_can_message_null(self, PRIORITY_HEARTBEAT, TYPE_HEARTBEAT);
   } else {
     signed char key = SYNC(&musicPlayer, get_key, 0);
     short tempo = SYNC(&musicPlayer, get_tempo, 0);
-    int args = can_send_conductor_state_pack(tempo, key);
+    unsigned char buff[8] = {0};
 
-    can_send_conductor_state(self, args);
+    // Two bytes for the tempo.
+    buff[0] = TYPE_CONDUCTOR_SEND_STATE;
+    buff[1] = (tempo >> 8) & 0xFF;
+    buff[2] = (tempo >> 0) & 0xFF;
+
+    // One byte for the key.
+    buff[3] = key & 0xFF;
+
+    send_can_message(self, PRIORITY_HEARTBEAT, buff);
   }
-  #if LOG_LEVEL >= 3
-  SCI_WRITE(&sci0, "Sent heartbeat message.\n");
-  #endif
 
-  if (self->heartbeat_message != NULL) {
-    ABORT(self->heartbeat_message);
-    self->heartbeat_message = NULL;
-  }
-
-  self->heartbeat_message = SEND(MSEC(150), MAX_LAG_DEADLINE, self, can_send_heartbeat, 0);
+  SEND(MSEC(200), MAX_LAG_DEADLINE, self, can_send_heartbeat, 0);
 }
 
-void stop_heartbeat_message(CANService *self, int unused) {
-  if (self->heartbeat_message != NULL) {
-    ABORT(self->heartbeat_message);
-    self->heartbeat_message = NULL;
-
-    #if LOG_LEVEL >= 2
-    SCI_WRITE(&sci0, "Stopped heartbeat message loop.\n");
-    #endif
-  }
-}
-
-void can_send_conductor_state(CANService *self, int args) {
-  short tempo = can_send_conductor_state_unpack_tempo(args);
-  char key = can_send_conductor_state_unpack_key(args);
-
-  unsigned char buff[8] = {0};
-
-  // Two bytes for the tempo.
-  buff[0] = TYPE_CONDUCTOR_SEND_STATE;
-  buff[1] = (tempo >> 8) & 0xFF;
-  buff[2] = (tempo >> 0) & 0xFF;
-
-  // One byte for the key.
-  buff[3] = key & 0xFF;
-
-  send_can_message(self, PRIORITY_HEARTBEAT, buff);
-}
 
 void can_send_conductor_claim(CANService *self, int unused) {
   send_can_message_null(self, PRIORITY_CONDUCTOR_CLAIM, TYPE_CONDUCTOR_CLAIM);
@@ -469,6 +437,14 @@ void can_receive_message(CANService *self, int unused) {
   CANMsg msg;
   CAN_RECEIVE(&can0, &msg);
 
+  if (self->force_silent) {
+    #if LOG_LEVEL >= 3
+    SCI_WRITE(&sci0, "In force silent mode, skipping received CAN message.\n");
+    #endif
+
+    return;
+  }
+
   if(self->bus_can_missing) {
     SCI_WRITE(&sci0, "Leaving Silent Failure\n");
     self->bus_can_missing = false;
@@ -477,20 +453,6 @@ void can_receive_message(CANService *self, int unused) {
       self->conductor_last = false;
       SCI_WRITE(&sci0, "I Now Join As A Musician\n");
     }
-  }
-
-  if (self->force_silent) {
-    #if LOG_LEVEL >= 1
-    SCI_WRITE(&sci0, "In force silent mode, skipping received CAN message.\n");
-    #endif
-
-    stop_heartbeat_message(self, 0);
-
-    return;
-  }
-
-  if(self->heartbeat_message == NULL) {
-    self->heartbeat_message = BEFORE(MAX_LAG_DEADLINE, self, can_send_heartbeat, 0);
   }
 
   internal_receive_message(&msg);

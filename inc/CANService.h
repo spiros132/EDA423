@@ -14,9 +14,6 @@ typedef struct {
   /// @brief A boolean to indicate whether the board has been failing to connect to the CAN bus.
   int bus_can_missing;
 
-  /// @brief The heartbeat message that is sent to the other boards.
-  Msg heartbeat_message;
-
   /// @brief A boolean to see if we were the conductor before we failed.
   int conductor_last;
 
@@ -30,8 +27,6 @@ typedef struct {
   false, \
   /* bus_can_missing */ \
   false, \
-  /* heartbeat_message */ \
-  NULL, \
   /* conductor_last */ \
   false \
 }
@@ -47,42 +42,16 @@ void can_set_force_silent(CANService *, int);
 /// @return The boolean value of the force silent mode.
 int can_get_force_silent(CANService *, int);
 
+/// @brief Gets if the CAN bus is missing.
+/// @param CANService The CANService object.
+/// @param int Unused parameter.
+/// @return The boolean value of if the CAN bus is missing.
+int can_get_bus_can_missing(CANService *, int);
 
 /// @brief A function to send the heartbeat message to the other boards.
 /// @param CANService The CANService object.
 /// @param int Unused parameter.
 void can_send_heartbeat(CANService *, int);
-
-/// @brief Stops the heartbeat message loop.
-/// @param CANService The CANService object.
-/// @param int Unused parameter.
-void stop_heartbeat_message(CANService *, int);
-
-
-/// @brief A function to send the conductor state (tempo and key) to the other boards.
-/// @param tempo The tempo to pack.
-/// @param key The key to pack.
-/// @return The packed arguments as an int.
-static inline int can_send_conductor_state_pack(short tempo, signed char key) {
-  return (int)((tempo << 8) | key);
-}
-/// @brief A function to unpack the tempo from the arguments of the `can_send_conductor_state` function.
-/// @param args The arguments packed as an int.
-/// @return The unpacked tempo as a short.
-static inline short can_send_conductor_state_unpack_tempo(int args) {
-  return (short)((args >> 8) & 0xFFFF);
-}
-/// @brief A function to unpack the key from the arguments of the `can_send_conductor_state` function.
-/// @param args The arguments packed as an int.
-/// @return The unpacked key as a char.
-static inline signed char can_send_conductor_state_unpack_key(int args) {
-  return (signed char)(args & 0xFF);
-}
-
-/// @brief Sends the state of the conductor to the other boards.
-/// @param CANService The CANService object.
-/// @param int The arguments packed as an int. Use the `can_send_conductor_state_pack` function to pack the arguments into an integer.
-void can_send_conductor_state(CANService *, int);
 
 
 /// @brief Sends a conductor claim message to the other boards.
