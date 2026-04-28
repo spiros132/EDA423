@@ -211,6 +211,9 @@ void finish_note(MusicPlayer *self, int unused)
 
 void play_note(MusicPlayer *self, int unused)
 {
+  // Disable automatic play
+  self->is_playing = false;
+
   // Change the current note:
   // - Get the period of the node with the index "index"
   // - Set the period on the sound player
