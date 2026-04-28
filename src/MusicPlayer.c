@@ -150,6 +150,8 @@ void abort_msg(MusicPlayer *self, int unused)
 
 void next_note(MusicPlayer *self, int unused)
 {
+  self->next_note_msg = NULL;
+
   // Change the current note:
   // - Get the period of the node with the index "index"
   // - Set the period on the sound player
@@ -189,6 +191,13 @@ void next_note(MusicPlayer *self, int unused)
     SYNC(&soundPlayer, soundplayer_set_playing, false);
   }
 
+  int mode = SYNC(&database, get_mode, 0);
+
+  // If we are the conductor, we should also send a message to the musicians with which current node we are playing.
+  if (mode == CONDUCTOR_MODE) {
+    SYNC(&canService, can_send_note_to_play, self->index);
+  }
+
   // Get the beat time, convert from beats per minute, to how many milliseconds for one beat.
   // In the beats list we count a half beat as 1x, one beat as 2x and two beats as 4x.
   // 30000 = (60/2 (because of the above reason)) * 1000 (for milliseconds)
@@ -201,16 +210,12 @@ void next_note(MusicPlayer *self, int unused)
   self->finish_note_msg = SEND(MSEC(mspb), MAX_LAG_DEADLINE, self, finish_note, 0);
   self->index = (self->index + 1) % NOTES_AMOUNT;
 
-  int mode = SYNC(&database, get_mode, 0);
-
-  // If we are the conductor, we should also send a message to the musicians with which current node we are playing.
-  if (mode == CONDUCTOR_MODE) {
-    SYNC(&canService, can_send_note_to_play, self->index);
-  }
 }
 
 void finish_note(MusicPlayer *self, int unused)
 {
+  self->finish_note_msg = NULL;
+
   SYNC(&soundPlayer, soundplayer_set_playing, false);
 
   // Schedule the next_note function
