@@ -20,9 +20,9 @@
 /* CAN Message Definitions */
 
 /// @brief First priority, used for heartbeat messages.
-#define PRIORITY_HEARTBEAT 0
+#define PRIORITY_HEARTBEAT 1
 /// @brief Second priority, used for conductor claim messages.
-#define PRIORITY_CONDUCTOR_CLAIM 1
+#define PRIORITY_CONDUCTOR_CLAIM 2
 /// @brief Third priority, used for conductor messages.
 #define PRIORITY_CONDUCTOR 7
 
@@ -52,7 +52,7 @@
 #define PRINT_DEBUG_INFO_PERIOD SEC(5)
 
 /// @brief The time between two heartbeat messages to check if the other boards are alive.
-#define HEARTBEAT_TIMEOUT MSEC(500)
+#define HEARTBEAT_TIMEOUT MSEC(1000)
 
 /// @brief The maximum deadline to have so that there's no lag.
 #define MAX_LAG_DEADLINE MSEC(50)
@@ -113,6 +113,6 @@
 /* Debug Definitions */
 
 /// @brief The log level for the project. 0 means no logs, 1 means only important logs, 2 means all logs, 3 means all logs plus some spam logs.
-#define LOG_LEVEL 2
+#define LOG_LEVEL 0
 
 #endif
