@@ -435,7 +435,13 @@ void can_send_set_key(CANService *self, int key) {
 
 void can_receive_message(CANService *self, int unused) {
   CANMsg msg;
-  CAN_RECEIVE(&can0, &msg);
+  int no_messages = CAN_RECEIVE(&can0, &msg);
+
+  if(no_messages) {
+    SCI_WRITE(&sci0, "ERROR | Failed to receive CAN message, no messages in buffer.\n");
+    return;
+  }
+
 
   if (self->force_silent) {
     #if LOG_LEVEL >= 3
