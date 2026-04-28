@@ -51,9 +51,9 @@ void check_active_boards(App *self, int unused) {
 }
 
 void reset_board(App *self, int unused) {
-  BEFORE(MAX_LAG_DEADLINE, &database, database_reset_board, 0);
-  BEFORE(MAX_LAG_DEADLINE, &musicPlayer, musicplayer_reset_board, 0);
-  BEFORE(MAX_LAG_DEADLINE, &soundPlayer, soundplayer_reset_board, 0);
+  ASYNC(&database, database_reset_board, 0);
+  ASYNC(&musicPlayer, musicplayer_reset_board, 0);
+  ASYNC(&soundPlayer, soundplayer_reset_board, 0);
 }
 
 void finish_input(App *self, int unused) {
