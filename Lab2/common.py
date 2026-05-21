@@ -2,10 +2,11 @@ from collections.abc import Callable
 
 # TASK AND TASK SET #
 class Task:
-  def __init__(self, C: int, D: int, T: int):
+  def __init__(self, C: int, D: int, T: int, O: int = 0):
     self.C = C
     self.D = D
     self.T = T
+    self.O = O
 
 class TaskSet:
   def __init__(self, task_set: list[Task]):
