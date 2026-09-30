@@ -74,6 +74,9 @@ void finish_input(App *self, int unused) {
   clear_input(self, unused);
 }
 
+int get_time(App *self, int unused) {
+}
+
 void print_debug_info(App *self, int unused) {
   int mode = SYNC(&database, get_mode, 0);
 
@@ -317,6 +320,8 @@ void startApp(App *self, int arg) {
   SCI_WRITE(&sci0, "Enter integer: \n");
 
   //SYNC(&canService, can_send_heartbeat, 0);
+
+  SYNC(&canService, reset_timer, 0);
 }
 
 int main() {

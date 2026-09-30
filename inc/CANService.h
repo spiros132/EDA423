@@ -33,6 +33,10 @@ typedef struct {
   /// @brief The preferred index to put the next message in the buffer.
   int preferred_index;
 
+  int enable_printing;
+
+  Timer timer;
+
   /// @brief The time when the last message was delivered.
   Timer last_delivered_timer;
 
@@ -60,6 +64,9 @@ typedef struct {
   -1, \
   /* preferred_index */ \
   0, \
+  /* enable_printing */ \
+  true, \
+  initTimer(), \
   /* last_delivered_timer */ \
   initTimer(), \
   /* received_msg_used */ \
@@ -90,6 +97,9 @@ void can_send_heartbeat(CANService *, int);
 /// @param int Unused parameter.
 void stop_heartbeat_message(CANService *, int);
 
+void set_enable_printing(CANService *, int);
+
+void reset_timer(CANService *, int);
 
 /// @brief A function to send the conductor state (tempo and key) to the other boards.
 /// @param tempo The tempo to pack.

@@ -115,8 +115,10 @@
 #define KEY_START_BURST 'b'
 #define KEY_STOP_BURST 'x'
 
-#define INTER_ARRIVAL_TIME MSEC(1000)
-#define BUFFER_SIZE 100
+#define KEY_ENABLE_PRINTING 'l'
+
+#define INTER_ARRIVAL_TIME MSEC(3000)
+#define BUFFER_SIZE 10
 
 /* Debug Definitions */
 

@@ -495,6 +495,10 @@ void can_send_one_message(CANService *self, int unused) {
   #endif
 }
 
+void set_enable_printing(CANService *self, int new_value) {
+  self->enable_printing = new_value;
+}
+
 void can_start_burst(CANService *self, int unused) {
   if(self->burst_message != NULL) {
     ABORT(self->burst_message);
@@ -574,6 +578,31 @@ void can_deliver_message(CANService *self, int index) {
   if (next_index != -1) {
     SEND(INTER_ARRIVAL_TIME, MAX_LAG_DEADLINE, self, can_deliver_message, next_index);
   }
+
+  // Print out the msgId of the message
+  if (self->enable_printing) {
+    SCI_WRITE(&sci0, "Delivered CAN message with ID: ");
+    char strBuff[10];
+    itoa(delivered_msg_id, strBuff, 10);
+    SCI_WRITE(&sci0, strBuff);
+    SCI_WRITECHAR(&sci0, '\n');
+  }
+
+  // Print out the time that it took to deliver the message
+
+  Time diff = T_SAMPLE(&self->timer);
+  if (self->enable_printing) {
+    SCI_WRITE(&sci0, "Time to deliver message: ");
+    char strBuff[30];
+    int x = SEC_OF(diff);
+    itoa(x, strBuff, 10);
+    SCI_WRITE(&sci0, strBuff);
+    SCI_WRITECHAR(&sci0, '\n');
+  }
+}
+
+void reset_timer(CANService *self, int unused) {
+  T_RESET(&self->timer);
 }
 
 void can_receive_message(CANService *self, int unused) {

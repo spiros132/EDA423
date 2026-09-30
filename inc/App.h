@@ -15,6 +15,8 @@ typedef struct {
   int historyLength;
 
   Msg debug_msg;
+
+  Timer timer;
 } App;
 
 
@@ -30,7 +32,8 @@ typedef struct {
   /* History Length */ \
   0, \
   /* Debug Msg */ \
-  NULL \
+  NULL, \
+  initTimer() \
 }
 
 
@@ -64,5 +67,8 @@ void reset_board(App *, int);
 /// @param App The app object.
 /// @param int Unused parameter.
 void check_active_boards(App *, int);
+
+
+int get_time(App *, int);
 
 #endif
