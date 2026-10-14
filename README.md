@@ -1,6 +1,6 @@
-# Part 0, Step 2
+# EDA423
 
-Handling of I/O on MD407. Enter integers and returns sum and median of the last 3 integers.
+Advanced Real-time Systems, MD407 firmware code. 
 
 ## Controls
 
